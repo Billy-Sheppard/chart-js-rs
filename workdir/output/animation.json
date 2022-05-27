@@ -1,0 +1,35 @@
+{
+  "definitions": {
+    "AnimationEvent": {
+      "type": "object",
+      "properties": {
+        "chart": {
+          "$ref": "#/definitions/Chart",
+          "title": "AnimationEvent.chart"
+        },
+        "numSteps": {
+          "type": "number",
+          "title": "AnimationEvent.numSteps"
+        },
+        "initial": {
+          "type": "boolean",
+          "title": "AnimationEvent.initial"
+        },
+        "currentStep": {
+          "type": "number",
+          "title": "AnimationEvent.currentStep"
+        }
+      },
+      "required": [
+        "chart",
+        "numSteps",
+        "initial",
+        "currentStep"
+      ],
+      "additionalProperties": false,
+      "title": "AnimationEvent"
+    }
+  },
+  "$id": "animation.json",
+  "$comment": "Generated from Chart.js/types/animation.d.ts by core-types-json-schema (https://github.com/grantila/core-types-json-schema) on behalf of typeconv (https://github.com/grantila/typeconv)"
+}

@@ -1,0 +1,159 @@
+{
+  "definitions": {
+    "ChartArea": {
+      "type": "object",
+      "properties": {
+        "top": {
+          "type": "number",
+          "title": "ChartArea.top"
+        },
+        "left": {
+          "type": "number",
+          "title": "ChartArea.left"
+        },
+        "right": {
+          "type": "number",
+          "title": "ChartArea.right"
+        },
+        "bottom": {
+          "type": "number",
+          "title": "ChartArea.bottom"
+        },
+        "width": {
+          "type": "number",
+          "title": "ChartArea.width"
+        },
+        "height": {
+          "type": "number",
+          "title": "ChartArea.height"
+        }
+      },
+      "required": [
+        "top",
+        "left",
+        "right",
+        "bottom",
+        "width",
+        "height"
+      ],
+      "additionalProperties": false,
+      "title": "ChartArea"
+    },
+    "Point": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "title": "Point.x"
+        },
+        "y": {
+          "type": "number",
+          "title": "Point.y"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "additionalProperties": false,
+      "title": "Point"
+    },
+    "TRBL": {
+      "type": "object",
+      "properties": {
+        "top": {
+          "type": "number",
+          "title": "TRBL.top"
+        },
+        "right": {
+          "type": "number",
+          "title": "TRBL.right"
+        },
+        "bottom": {
+          "type": "number",
+          "title": "TRBL.bottom"
+        },
+        "left": {
+          "type": "number",
+          "title": "TRBL.left"
+        }
+      },
+      "required": [
+        "top",
+        "right",
+        "bottom",
+        "left"
+      ],
+      "additionalProperties": false,
+      "title": "TRBL"
+    },
+    "TRBLCorners": {
+      "type": "object",
+      "properties": {
+        "topLeft": {
+          "type": "number",
+          "title": "TRBLCorners.topLeft"
+        },
+        "topRight": {
+          "type": "number",
+          "title": "TRBLCorners.topRight"
+        },
+        "bottomLeft": {
+          "type": "number",
+          "title": "TRBLCorners.bottomLeft"
+        },
+        "bottomRight": {
+          "type": "number",
+          "title": "TRBLCorners.bottomRight"
+        }
+      },
+      "required": [
+        "topLeft",
+        "topRight",
+        "bottomLeft",
+        "bottomRight"
+      ],
+      "additionalProperties": false,
+      "title": "TRBLCorners"
+    },
+    "CornerRadius": {
+      "type": "number",
+      "title": "CornerRadius"
+    },
+    "RoundedRect": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "title": "RoundedRect.x"
+        },
+        "y": {
+          "type": "number",
+          "title": "RoundedRect.y"
+        },
+        "w": {
+          "type": "number",
+          "title": "RoundedRect.w"
+        },
+        "h": {
+          "type": "number",
+          "title": "RoundedRect.h"
+        },
+        "radius": {
+          "$ref": "#/definitions/CornerRadius",
+          "title": "RoundedRect.radius"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "additionalProperties": false,
+      "title": "RoundedRect"
+    }
+  },
+  "$id": "geometric.json",
+  "$comment": "Generated from Chart.js/types/geometric.d.ts by core-types-json-schema (https://github.com/grantila/core-types-json-schema) on behalf of typeconv (https://github.com/grantila/typeconv)"
+}

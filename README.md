@@ -24,9 +24,9 @@ For crate use:
 
 ## How the "transpiling" works
 1. Clones the Chart.js repo and checks out the most recent tag.
-2. Installs TypeDoc and QuickyType temorarily via `npm`.
-3. Adjusts the `tsconfig.json` to work with TypeDoc properly
-4. Runs TypeDoc to a `json` file.
-5. Runs QuickType on that `json` file to `api/src/types.rs`.
-6. Cleans up working directory.
-
+2. Installs TypeConv and QuickyType temorarily via `npm`.
+3. Adjusts the `tsconfig.json` to work with TypeConv properly
+4. Runs TypeConv to a `json` file per `.ts`.
+5. Runs QuickType on those `json` files to `api/src/types/{file}.rs`.
+6. Formats the `.rs` files.
+7. Cleans up working directory.

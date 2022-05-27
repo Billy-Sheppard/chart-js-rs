@@ -1,0 +1,34 @@
+{
+  "definitions": {
+    "TimeUnit": {
+      "type": "string",
+      "enum": [
+        "millisecond",
+        "second",
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "year"
+      ],
+      "title": "TimeUnit"
+    },
+    "DateAdapter": {
+      "type": "object",
+      "properties": {
+        "options": {
+          "title": "DateAdapter.options"
+        }
+      },
+      "required": [
+        "options"
+      ],
+      "additionalProperties": false,
+      "title": "DateAdapter"
+    }
+  },
+  "$id": "adapters.json",
+  "$comment": "Generated from Chart.js/types/adapters.d.ts by core-types-json-schema (https://github.com/grantila/core-types-json-schema) on behalf of typeconv (https://github.com/grantila/typeconv)"
+}
