@@ -1,5 +1,7 @@
 # Chart.js types API in Rust
 
+***In Alpha, most likely does not work.***
+
 ## What this repo does
 - "Transpiles" the Chart.js typescript types to Rust structs
 - Also provide a rust crate/library for API use within WASM

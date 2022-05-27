@@ -5,4 +5,4 @@ edition = "2021"
 authors = ["Billy Sheppard"]
 
 [dependencies]
-serde = "1.0.137"
+serde = { version = "1.0.137", features = ["derive"] }

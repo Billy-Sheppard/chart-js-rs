@@ -13,6 +13,7 @@ fn run() -> Result<(), Error> {
         }
     };
 
+    
     // git clone chartjs
     run_command(
         "git",
@@ -28,7 +29,7 @@ fn run() -> Result<(), Error> {
         "List Chart.js tags",
         Some("workdir/Chart.js"),
     )?;
-
+    
     // get most recent tags
     let recent = run_command(
         "git",
@@ -36,7 +37,7 @@ fn run() -> Result<(), Error> {
         "Get most recent tags",
         Some("workdir/Chart.js"),
     )?;
-
+    
     // check out most recent tag
     run_command(
         "git",
@@ -44,6 +45,9 @@ fn run() -> Result<(), Error> {
         "Checkout tag",
         Some("workdir/Chart.js"),
     )?;
+    
+    // copy in typedoc
+    run_command("cp", &["./typedoc.json", "./workdir/Chart.js/typedoc.json"], "Copy in typedoc config", None)?;
 
     // fix tsconfig
     let ts = fs::read_to_string("workdir/Chart.js/tsconfig.json")
@@ -72,7 +76,7 @@ fn run() -> Result<(), Error> {
     // run typedoc
     run_command(
         "../node_modules/.bin/typedoc",
-        &["--json", "../output.json"],
+        &["types/index.esm.d.ts", "--json", "../output.json"],
         "Run Type Doc",
         Some("workdir/Chart.js"),
     )?;
@@ -97,10 +101,13 @@ fn run() -> Result<(), Error> {
         let version = env!("CARGO_PKG_VERSION");
         let now = run_command("date", &[], "Get UTC now", None)?;
 
-        let ty = fs::read_to_string("api/src/types.rs").map_err(|e| Error::Err(e.to_string()))?;
+        let ty = fs::read_to_string("api/src/types.rs")
+            .map_err(|e| Error::Err(e.to_string()))?
+            .replace("\n\n    ", "\n    ");
+
         let mut ty = ty
             .lines()
-            .skip(13)
+            .skip(14)
             .map(ToOwned::to_owned)
             .collect::<Vec<String>>();
         ty.reverse();
@@ -121,7 +128,7 @@ fn main() {
     };
 
     // remove workdir
-    let _ = run_command("rm", &["-rf", "workdir"], "Remove work dir", None);
+    // let _ = run_command("rm", &["-rf", "workdir"], "Remove work dir", None);
 
     if run.is_err() {
         eprintln!("{:#?}", run.err());

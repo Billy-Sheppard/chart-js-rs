@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "quicktype": "^15.0.261",
+    "typedoc": "^0.22.15"
+  }
+}
