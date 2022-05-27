@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "quicktype": "^15.0.261",
-    "typeconv": "^1.7.0"
-  }
-}

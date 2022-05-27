@@ -1,3 +1,3 @@
 # /usr/bin/bash
 
-cargo run --package transpiler
+cargo run --package chart-js-rs-transpiler --release
