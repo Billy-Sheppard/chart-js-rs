@@ -1,32 +1,50 @@
 # Chart.js types API in Rust
 
-***In Alpha, most likely does not work.***
+***In Alpha, types added as needed, feel free to PR.***
 
-## What this repo does
-- "Transpiles" the Chart.js typescript types to Rust structs
-- Also provide a rust crate/library for API use within WASM
+## How to use
 
-## Dependencies
-For transpiling:
-- `npm` accessible on the $PATH
+### Cargo.toml: 
+```toml
+[dependencies.chart-js-rs]
+path = "../../../chart-js-rs"
+```
 
-For crate use:
-- a Rust project
+### Rust:
+```rust
+    let id = "[YOUR CHART ID HERE]";
+    let chart = chart_js_rs::scatter::Scatter {
+        id: id.to_string(),
+        r#type: "scatter".into(),
+        options: ChartOptions { .. },
+        data: Dataset { .. },
+    };
+    // to use any callbacks or functions you use render_mutate and refer to the JS below
+    chart.to_chart().render_mutate(&id);
 
-## How to use this repo
-- To transpile the code yourself run `regenerate_types.sh`.
+    // else use render
+    chart.to_chart().render(id);
+```
 
- - If you just wish to include this crate in your rust project then use accordingly:
-    ```toml
-    [dependencies]
-    chart-js-rs = { version = "0.0.1", git = "https://github.com/Billy-Sheppard/chart-js-rs.git" }
-    ```
+### Your html file:
+```html
+<script src="https://cdn.jsdelivr.net/npm/chart.js@^3"></script>
 
-## How the "transpiling" works
-1. Clones the Chart.js repo and checks out the most recent tag.
-2. Installs TypeConv and QuickyType temorarily via `npm`.
-3. Adjusts the `tsconfig.json` to work with TypeConv properly
-4. Runs TypeConv to a `json` file per `.ts`.
-5. Runs QuickType on those `json` files to `api/src/types/{file}.rs`.
-6. Formats the `.rs` files.
-7. Cleans up working directory.
+...
+
+<script>
+  function mutate_chart_object(v) { // must have this function name
+    if (v.id === ("[YOUR CHART ID HERE]")) {
+    // do any work here, this would prepend `$` to y1 axis tick labels
+      v.options.scales.y1.ticks = {
+        callback:
+          function (value, _index, _values) {
+            return '$' + value.toFixed(2);
+          }
+      };
+    };
+
+    return v
+  }
+</script>
+```

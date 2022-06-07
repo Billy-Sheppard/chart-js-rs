@@ -1,5 +1,0 @@
-[package]
-name = "chart-js-rs-transpiler"
-version = "0.1.0"
-edition = "2021"
-authors = ["Billy Sheppard"]
