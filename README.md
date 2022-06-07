@@ -7,7 +7,7 @@
 ### Cargo.toml: 
 ```toml
 [dependencies.chart-js-rs]
-path = "../../../chart-js-rs"
+git = "https://github.com/Billy-Sheppard/chart-js-rs"
 ```
 
 ### Rust:
