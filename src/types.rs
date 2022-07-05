@@ -1,12 +1,12 @@
 use serde::Serialize;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Dataset<T> {
     pub datasets: T,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct XYDataset {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
@@ -52,7 +52,7 @@ pub struct XYDataset {
     pub yAxisID: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct XYPoint {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub x: Option<String>,
@@ -61,7 +61,7 @@ pub struct XYPoint {
     pub y: Option<f64>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ChartOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub plugins: Option<ChartPlugins>,
@@ -82,7 +82,7 @@ pub struct ChartOptions {
     pub legend: Option<ChartLegend>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ChartPlugins {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub autocolors: Option<bool>,
@@ -96,19 +96,20 @@ pub struct ChartPlugins {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<Title>,
 }
-#[derive(Debug, Clone, Serialize)]
+
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Annotations {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<HashMap<String, LineAnnotation>>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct TooltipPlugins {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ChartScale {
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -145,16 +146,16 @@ pub struct ChartScale {
     pub max: Option<f64>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Grid {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub drawOnChartArea: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct LineAnnotation {
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -176,13 +177,13 @@ pub struct LineAnnotation {
     pub borderWidth: Option<usize>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ScaleTime {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub displayFormats: Option<DisplayFormats>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct DisplayFormats {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub day: Option<String>,
@@ -194,7 +195,7 @@ pub struct DisplayFormats {
     pub minute: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ScaleTicks {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub align: Option<String>,
@@ -203,7 +204,7 @@ pub struct ScaleTicks {
     pub maxTicksLimit: Option<usize>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Title {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
@@ -212,7 +213,7 @@ pub struct Title {
     pub display: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ChartInteraction {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub intersect: Option<bool>,
@@ -224,13 +225,13 @@ pub struct ChartInteraction {
     pub axis: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ChartTooltips {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ChartLegend {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position: Option<String>,
@@ -239,7 +240,7 @@ pub struct ChartLegend {
     pub labels: Option<LegendLabel>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct LegendLabel {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub usePointStyle: Option<bool>,

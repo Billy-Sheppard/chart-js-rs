@@ -32,6 +32,18 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 ...
 
+<script type="module">
+    import init from 'wasm.js';
+
+    async function run() {
+      await init();
+    }
+
+    run();
+</script>
+
+...
+
 <script>
   function mutate_chart_object(v) { // must have this function name
     if (v.id === ("[YOUR CHART ID HERE]")) {
