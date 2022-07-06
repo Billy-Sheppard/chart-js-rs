@@ -13,7 +13,7 @@ pub use types::*;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
 #[wasm_bindgen(inline_js = r#"export function render_chart(v, id, mutate) {
-    console.log(v);
+    console.debug(v);
 
     let obj;
     if (mutate) {

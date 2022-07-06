@@ -50,6 +50,9 @@ pub struct XYDataset {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub yAxisID: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xAxisID: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -144,6 +147,9 @@ pub struct ChartScale {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max: Option<f64>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub grouped: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -181,6 +187,8 @@ pub struct LineAnnotation {
 pub struct ScaleTime {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub displayFormats: Option<DisplayFormats>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
