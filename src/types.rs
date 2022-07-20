@@ -1,9 +1,51 @@
-use serde::Serialize;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use std::option::Option;
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct Dataset<T> {
     pub datasets: T,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(transparent)]
+pub struct NumberOrDateString(String);
+impl<T: Display> From<T> for NumberOrDateString {
+    fn from(s: T) -> Self {
+        Self(s.to_string())
+    }
+}
+impl Serialize for NumberOrDateString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let num: Result<f64, _> = self.0.parse();
+        match num {
+            Ok(num) => serializer.serialize_f64(num),
+            Err(_) => serializer.serialize_str(&self.0),
+        }
+    }
+}
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(transparent)]
+pub struct NumberString(String);
+impl<T: Display> From<T> for NumberString {
+    fn from(s: T) -> Self {
+        Self(s.to_string())
+    }
+}
+impl Serialize for NumberString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let num: Result<f64, _> = self.0.parse();
+        match num {
+            Ok(num) => serializer.serialize_f64(num),
+            Err(_) => serializer.serialize_str(&self.0),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -18,29 +60,32 @@ pub struct XYDataset {
     pub borderColor: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub barThickness: Option<usize>,
+    pub barThickness: Option<NumberString>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub backgroundColor: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub order: Option<usize>,
+    pub order: Option<NumberString>,
 
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub r#type: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pointRadius: Option<usize>,
+    pub pointRadius: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointHoverRadius: Option<NumberOrDateString>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pointStyle: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub borderWidth: Option<usize>,
+    pub borderWidth: Option<NumberString>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub borderDash: Option<Vec<usize>>,
+    pub borderDash: Option<Vec<NumberString>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub borderJoinStyle: Option<String>,
@@ -58,10 +103,10 @@ pub struct XYDataset {
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct XYPoint {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub x: Option<String>,
+    pub x: Option<NumberOrDateString>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub y: Option<f64>,
+    pub y: Option<NumberString>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -83,6 +128,15 @@ pub struct ChartOptions {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub legend: Option<ChartLegend>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub animation: Option<Animation>,
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct Animation {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<NumberString>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -98,8 +152,16 @@ pub struct ChartPlugins {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<Title>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub legend: Option<PluginLegend>,
 }
 
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct PluginLegend {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display: Option<bool>,
+}
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct Annotations {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -125,10 +187,13 @@ pub struct ChartScale {
     pub title: Option<Title>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub grid: Option<Grid>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ticks: Option<ScaleTicks>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub grace: Option<usize>,
+    pub grace: Option<NumberOrDateString>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
@@ -137,17 +202,20 @@ pub struct ChartScale {
     pub bounds: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub grid: Option<Grid>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub position: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub min: Option<f64>,
+    pub min: Option<NumberOrDateString>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub max: Option<f64>,
-    
+    pub max: Option<NumberOrDateString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suggestedMin: Option<NumberOrDateString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suggestedMax: Option<NumberOrDateString>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub grouped: Option<bool>,
 }
@@ -177,10 +245,10 @@ pub struct LineAnnotation {
     pub borderColor: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub borderDash: Option<Vec<usize>>,
+    pub borderDash: Option<Vec<NumberString>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub borderWidth: Option<usize>,
+    pub borderWidth: Option<NumberString>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -209,7 +277,7 @@ pub struct ScaleTicks {
     pub align: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub maxTicksLimit: Option<usize>,
+    pub maxTicksLimit: Option<NumberString>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
