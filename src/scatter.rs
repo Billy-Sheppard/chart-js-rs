@@ -1,5 +1,5 @@
 use serde::Serialize;
-use wasm_bindgen::{JsValue, UnwrapThrowExt};
+use wasm_bindgen::JsValue;
 
 use crate::{types::*, utils::*, ChartOptions};
 
@@ -9,11 +9,11 @@ pub struct Scatter {
     pub r#type: String,
     pub data: Dataset<Vec<XYDataset>>,
     pub options: ChartOptions,
-    pub id: String
+    pub id: String,
 }
 
 impl Scatter {
     pub fn to_chart(self) -> Chart {
-        Chart(JsValue::from_serde(&self).unwrap_throw())
+        Chart(JsValue::from_serde(&self).unwrap())
     }
 }

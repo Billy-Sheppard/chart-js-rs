@@ -6,7 +6,6 @@ use std::{collections::HashMap, fmt::Display};
 pub struct Dataset<T> {
     pub datasets: T,
 }
-
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(transparent)]
 pub struct NumberOrDateString(String);
@@ -20,10 +19,12 @@ impl Serialize for NumberOrDateString {
     where
         S: serde::Serializer,
     {
-        let num: Result<f64, _> = self.0.parse();
-        match num {
-            Ok(num) => serializer.serialize_f64(num),
-            Err(_) => serializer.serialize_str(&self.0),
+        let fnum: Result<f64, _> = self.0.parse();
+        let inum: Result<i64, _> = self.0.parse();
+        match (fnum, inum) {
+            (Ok(_), Ok(inum)) => serializer.serialize_i64(inum),
+            (Ok(fnum), _) => serializer.serialize_f64(fnum),
+            _ => serializer.serialize_str(&self.0),
         }
     }
 }
@@ -40,10 +41,12 @@ impl Serialize for NumberString {
     where
         S: serde::Serializer,
     {
-        let num: Result<f64, _> = self.0.parse();
-        match num {
-            Ok(num) => serializer.serialize_f64(num),
-            Err(_) => serializer.serialize_str(&self.0),
+        let fnum: Result<f64, _> = self.0.parse();
+        let inum: Result<i64, _> = self.0.parse();
+        match (fnum, inum) {
+            (Ok(_), Ok(inum)) => serializer.serialize_i64(inum),
+            (Ok(fnum), _) => serializer.serialize_f64(fnum),
+            _ => serializer.serialize_str(&self.0),
         }
     }
 }
@@ -278,6 +281,9 @@ pub struct ScaleTicks {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub maxTicksLimit: Option<NumberString>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stepSize: Option<NumberString>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]

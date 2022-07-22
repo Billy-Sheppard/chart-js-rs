@@ -23,10 +23,10 @@ use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
         obj = v
     };
 
-    console.log(obj);
+    console.debug(obj);
 
     const ctx = document.getElementById(id);
-    const config = new Chart(ctx, obj);
+    var chart = new Chart(ctx, obj);
 }"#)]
 extern "C" {
     fn render_chart(v: JsValue, id: &str, mutate: bool);
