@@ -2,9 +2,19 @@ use serde::{Deserialize, Serialize};
 use std::option::Option;
 use std::{collections::HashMap, fmt::Display};
 
+pub trait DatasetTrait : Serialize {}
+pub trait Annotation : Serialize {}
+
+#[derive(Debug, Serialize, Default)]
+pub struct NoDatasets {}
+impl DatasetTrait for NoDatasets {}
+#[derive(Debug, Serialize, Default)]
+pub struct NoAnnotations {}
+impl Annotation for NoAnnotations {}
+
 #[derive(Debug, Clone, Serialize, Default)]
-pub struct Dataset<T> {
-    pub datasets: T,
+pub struct Dataset<D: DatasetTrait> {
+    pub datasets: D,
     pub labels: Option<Vec<NumberOrDateString>>,
 }
 
@@ -104,6 +114,7 @@ pub struct XYDataset {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub xAxisID: Option<String>,
 }
+impl DatasetTrait for Vec<XYDataset> {}
 
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct XYPoint {
@@ -115,9 +126,9 @@ pub struct XYPoint {
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
-pub struct ChartOptions {
+pub struct ChartOptions<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub plugins: Option<ChartPlugins>,
+    pub plugins: Option<ChartPlugins<A>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scales: Option<HashMap<String, ChartScale>>,
@@ -145,7 +156,7 @@ pub struct Animation {
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
-pub struct ChartPlugins {
+pub struct ChartPlugins<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub autocolors: Option<bool>,
 
@@ -153,7 +164,7 @@ pub struct ChartPlugins {
     pub tooltip: Option<TooltipPlugins>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub annotation: Option<Annotations>,
+    pub annotation: Option<Annotations<A>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<Title>,
@@ -169,9 +180,9 @@ pub struct PluginLegend {
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
-pub struct Annotations {
+pub struct Annotations<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub annotations: Option<HashMap<String, LineAnnotation>>,
+    pub annotations: Option<HashMap<String, A>>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -242,6 +253,9 @@ pub struct LineAnnotation {
     pub r#type: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub drawTime: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub xMin: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -256,6 +270,41 @@ pub struct LineAnnotation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub borderWidth: Option<NumberString>,
 }
+impl Annotation for LineAnnotation {}
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct BoxAnnotation {
+    #[serde(rename = "type")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub r#type: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub drawTime: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xMin: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xMax: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub yMin: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub yMax: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backgroundColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderDash: Option<Vec<NumberString>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderWidth: Option<NumberString>,
+}
+impl Annotation for BoxAnnotation {}
 
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct ScaleTime {

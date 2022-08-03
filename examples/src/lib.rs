@@ -1,4 +1,4 @@
-use chart_js_rs::{bar::Bar, scatter::Scatter, ChartOptions, Dataset, XYDataset, XYPoint};
+use chart_js_rs::{bar::Bar, scatter::Scatter, ChartOptions, Dataset, XYDataset, XYPoint, NoAnnotations};
 use dominator::{self, events, html, Dom};
 use futures_signals::{
     internal,
@@ -61,7 +61,7 @@ impl Model {
         // construct and render chart here
         let id = "chart_one";
 
-        let chart = Scatter {
+        let chart = Scatter::<NoAnnotations> { // we use <NoAnnotations> here to type hint for the compiler
             data: Dataset {
                 datasets: Vec::from([
                     XYDataset {
@@ -119,7 +119,7 @@ impl Model {
         // construct and render chart here
         let id = "chart_two";
 
-        let chart = Bar {
+        let chart = Bar::<NoAnnotations> { // we use <NoAnnotations> here to type hint for the compiler
             data: Dataset {
                 labels: Some(
                     // use a range to give us our X axis labels

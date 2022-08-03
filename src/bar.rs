@@ -4,15 +4,15 @@ use wasm_bindgen::JsValue;
 use crate::{types::*, utils::*, ChartOptions};
 
 #[derive(Debug, Clone, Serialize, Default)]
-pub struct Bar {
+pub struct Bar<A: Annotation> {
     #[serde(rename = "type")]
     pub r#type: String,
     pub data: Dataset<Vec<XYDataset>>,
-    pub options: ChartOptions,
+    pub options: ChartOptions<A>,
     pub id: String,
 }
 
-impl Bar {
+impl<A: Annotation> Bar<A> {
     pub fn to_chart(self) -> Chart {
         Chart(JsValue::from_serde(&self).unwrap())
     }
