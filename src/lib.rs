@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
+pub mod bar;
 pub mod functions;
 pub mod scatter;
-pub mod bar;
 pub mod types;
 
 #[doc(hidden)]

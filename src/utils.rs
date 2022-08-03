@@ -1,6 +1,6 @@
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
-use crate::{render_chart};
+use crate::render_chart;
 
 #[wasm_bindgen]
 pub struct Chart(pub(crate) JsValue);

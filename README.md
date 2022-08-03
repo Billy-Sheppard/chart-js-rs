@@ -10,7 +10,7 @@
 
 Check out the example folder for some code examples. The example uses WebAssembly and the [dominator](https://github.com/Pauan/rust-dominator) crate to produce charts. This library should be compatible with any WASM/HTML library.
 
-The compiled webpage can be found here: https://billy-sheppard.github.io/chart-js-rs/example/index.html
+The compiled webpage can be found here: https://billy-sheppard.github.io/chart-js-rs/examples/index.html
 
 ### Cargo.toml: 
 ```toml
