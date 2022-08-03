@@ -1,0 +1,41 @@
+<html>
+
+<head>
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+
+  <title>chart-js-rs Example</title>
+
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-startup-image" type="image/png" href="/favicon.png">
+
+  <link rel="stylesheet" href="/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.2/css/bulma.min.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@^3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
+  
+  <script type="module">
+    import init from './chart_js_rs_example.js';
+
+    async function run() {
+      await init();
+    }
+
+    run();
+  </script>
+</head>
+<body>
+</body>
+<script>
+  function mutate_chart_object(v) {
+    if (v.id.startsWith("chart2")) {
+
+    }
+    
+    return v
+  }
+</script>
+
+</html>

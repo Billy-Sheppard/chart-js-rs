@@ -1,0 +1,21 @@
+[package]
+authors = ["Billy Sheppard <billysheppard@rmhedge.com>"]
+name = "chart-js-rs-example"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dominator = { version = "0.5.28", default-features = false }
+wasm-bindgen = { version = "0.2.82" }
+wasm-bindgen-futures = { version = "0.4.30", default-features = false }
+web-sys = { version = "0.3.56", default-features = false }
+js-sys = { version = "0.3.56", default-features = false }
+futures-signals = { version = "0.3.24", default-features = false }
+gloo = { version = "0.6.1" }
+console_error_panic_hook = { version = "0.1.7", default-features = false }
+rand = "0.8.5"
+getrandom = { version = "0.2.7", features = ["js"] }
+chart-js-rs = { path = "../" }
