@@ -3,6 +3,8 @@
 </p>
 
 # Chart.js types API in Rust 
+[![crates.io](https://img.shields.io/crates/v/chart-js-rs.svg)](https://crates.io/crates/chart-js-rs)
+[![docs.rs](https://docs.rs/chart-js-rs/badge.svg)](https://docs.rs/chart-js-rs)
 
 ***In Alpha, types added as needed, feel free to PR.***
 
