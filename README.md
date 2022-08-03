@@ -1,8 +1,12 @@
-# Chart.js types API in Rust
+# Chart.js types API in Rust 
 
 ***In Alpha, types added as needed, feel free to PR.***
 
 ## How to use
+
+Check out the example folder for some code examples. The example uses WebAssembly and the [dominator](https://github.com/Pauan/rust-dominator) crate to produce charts. This library should be compatible with any WASM/HTML library.
+
+The compiled webpage can be found here: https://billy-sheppard.github.io/chart-js-rs/example/index.html
 
 ### Cargo.toml: 
 ```toml

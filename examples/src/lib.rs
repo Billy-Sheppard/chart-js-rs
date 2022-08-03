@@ -111,7 +111,7 @@ impl Model {
             .prop("id", id)
             .style("height", "calc(100vh - 270px)")
             .after_inserted(move |_| {
-                chart.to_chart().render(id) // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see chart_two and index.html
+                chart.to_chart().render_mutate(id) // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see chart_two and index.html
             })
         })
     }
@@ -143,6 +143,7 @@ impl Model {
                     borderColor: Some("green".into()),
                     borderWidth: Some(2.into()),
                     label: Some("Dataset 1".into()),
+                    yAxisID: Some("y".into()),
                     ..Default::default() // always use `..Default::default()` to make sure this works in the future
                 }]),
             },

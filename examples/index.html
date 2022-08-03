@@ -30,8 +30,13 @@
 </body>
 <script>
   function mutate_chart_object(v) {
-    if (v.id.startsWith("chart2")) {
-
+    if (v.id == "chart_two") {
+      v.options.scales.y1.ticks = {
+        callback:
+          function (value, _index, _values) {
+            return '$' + value.toFixed(2);
+          }
+      };
     }
     
     return v
