@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="200" src="./examples/favicon.png" alt="Material Bread logo">
+</p>
+
 # Chart.js types API in Rust 
 
 ***In Alpha, types added as needed, feel free to PR.***
