@@ -2,7 +2,14 @@
 name = "chart-js-rs"
 version = "0.0.1"
 edition = "2021"
-authors = ["Billy Sheppard <billysheppard@rmhedge.com>"]
+authors = ["Billy Sheppard"]
+license = "Apache"
+keywords = ["javascript", "dom", "wasm", "charts"]
+categories = ["gui", "web-programming", "wasm"]
+readme = "README.md"
+description = "Chart JS API for Rust WebAssembly"
+repository = "https://github.com/Billy-Sheppard/chart-js-rs"
+homepage = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 [dependencies]
 serde = { version = "1.0.137", features = ["derive"] }
@@ -13,3 +20,4 @@ js-sys = "0.3.57"
 
 [workspace]
 members = ["examples"]
+
