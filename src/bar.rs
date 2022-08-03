@@ -3,7 +3,7 @@ use wasm_bindgen::JsValue;
 
 use crate::{types::*, utils::*, ChartOptions};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Bar {
     #[serde(rename = "type")]
     pub r#type: String,

@@ -5,7 +5,9 @@ use std::{collections::HashMap, fmt::Display};
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct Dataset<T> {
     pub datasets: T,
+    pub labels: Option<Vec<NumberOrDateString>>,
 }
+
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(transparent)]
 pub struct NumberOrDateString(String);
@@ -165,6 +167,7 @@ pub struct PluginLegend {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
 }
+
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct Annotations {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -281,7 +284,7 @@ pub struct ScaleTicks {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub maxTicksLimit: Option<NumberString>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stepSize: Option<NumberString>,
 }

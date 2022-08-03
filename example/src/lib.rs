@@ -121,7 +121,8 @@ impl Model {
 
         let chart = Bar {
             data: Dataset {
-                labels: Some( // use a range to give us our X axis labels
+                labels: Some(
+                    // use a range to give us our X axis labels
                     (0..data.len())
                         .into_iter()
                         .map(|d| (d + 1).into())

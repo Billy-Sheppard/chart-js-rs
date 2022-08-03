@@ -2,7 +2,7 @@
 name = "chart-js-rs"
 version = "0.0.1"
 edition = "2021"
-authors = ["Billy Sheppard"]
+authors = ["Billy Sheppard <billysheppard@rmhedge.com>"]
 
 [dependencies]
 serde = { version = "1.0.137", features = ["derive"] }

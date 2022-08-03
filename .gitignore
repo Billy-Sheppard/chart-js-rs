@@ -3,4 +3,5 @@ node_modules/
 
 # Added by cargo
 
+example/target
 /target
