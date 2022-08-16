@@ -97,6 +97,12 @@ pub struct XYDataset {
     pub pointStyle: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointBorderWidth: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointHoverBorderWidth: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub borderWidth: Option<NumberString>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
