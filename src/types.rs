@@ -262,10 +262,10 @@ pub struct LineAnnotation {
     pub drawTime: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub xMin: Option<String>,
+    pub xMin: Option<NumberOrDateString>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub xMax: Option<String>,
+    pub xMax: Option<NumberOrDateString>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub borderColor: Option<String>,
@@ -322,6 +322,18 @@ pub struct ScaleTime {
 
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct DisplayFormats {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub year: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quarter: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub month: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub week: Option<String>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub day: Option<String>,
 
