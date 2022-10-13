@@ -13,8 +13,9 @@ homepage = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 [dependencies]
 serde = { version = "1.0.137", features = ["derive"] }
-wasm-bindgen = { version = "0.2.81", features = ["serde-serialize"] }
-serde_json = "1.0.81"
+wasm-bindgen = { version = "0.2.83" }
+gloo-utils = { version = "0.1", features = ["serde"] }
+serde_json = "1"
 thiserror = "1"
 js-sys = "0.3.57"
 

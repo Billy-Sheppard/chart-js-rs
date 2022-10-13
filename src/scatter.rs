@@ -1,3 +1,4 @@
+use gloo_utils::format::JsValueSerdeExt;
 use serde::Serialize;
 use wasm_bindgen::JsValue;
 
