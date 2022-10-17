@@ -97,6 +97,15 @@ pub struct XYDataset {
     pub pointStyle: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointBackgroundColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointHoverBackgroundColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointBorderColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pointBorderWidth: Option<NumberString>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -110,6 +119,9 @@ pub struct XYDataset {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub borderJoinStyle: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hoverBackgroundColor: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stepped: Option<bool>,
@@ -153,6 +165,15 @@ pub struct ChartOptions<A: Annotation> {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub animation: Option<Animation>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spanGaps: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub elements: Option<ChartElements>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub responsive: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -195,6 +216,27 @@ pub struct Annotations<A: Annotation> {
 pub struct TooltipPlugins {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bodyColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bodyAlign: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub displayColors: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backgroundColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub titleColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub titleAlign: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub titleMarginBottom: Option<NumberString>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -241,6 +283,9 @@ pub struct ChartScale {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub grouped: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub beginAtZero: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -396,4 +441,61 @@ pub struct ChartLegend {
 pub struct LegendLabel {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub usePointStyle: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct ChartElements {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bar: Option<BarElementConfiguration>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line: Option<LineElementConfiguration>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub point: Option<PointElementConfiguration>,
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct BarElementConfiguration {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fill: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderRadius: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderWidth: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hoverBorderWidth: Option<NumberString>,
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct LineElementConfiguration {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fill: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderWidth: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cubicInterpolationMode: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct PointElementConfiguration {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub radius: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hitRadius: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hoverRadius: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderWidth: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hoverBorderWidth: Option<NumberString>,
 }
