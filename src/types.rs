@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::option::Option;
 use std::{collections::HashMap, fmt::Display};
 
-pub trait DatasetTrait : Serialize {}
-pub trait Annotation : Serialize {}
+pub trait DatasetTrait: Serialize {}
+pub trait Annotation: Serialize {}
 
 #[derive(Debug, Serialize, Default)]
 pub struct NoDatasets {}

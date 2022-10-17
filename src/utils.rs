@@ -7,7 +7,7 @@ pub struct Chart(pub(crate) JsValue);
 
 impl Chart {
     pub fn new(v: JsValue) -> Option<Self> {
-        v.is_object().then(|| Self(v))
+        v.is_object().then_some(Self(v))
     }
     pub fn render(self, id: &str) {
         render_chart(self.0, id, false);
