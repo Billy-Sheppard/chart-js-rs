@@ -1,3 +1,4 @@
+use gloo_utils::format::JsValueSerdeExt;
 use serde::Serialize;
 
 use crate::{types::*, utils::*, ChartOptions};
@@ -13,7 +14,7 @@ pub struct Bar<A: Annotation> {
 
 impl<A: Annotation> Bar<A> {
     pub fn to_chart(self) -> Chart {
-        Chart(serde_wasm_bindgen::to_value(&self).unwrap())
+        Chart(<::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self).unwrap())
     }
 }
 
