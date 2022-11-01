@@ -286,6 +286,9 @@ pub struct ChartScale {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub beginAtZero: Option<bool>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stacked: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
