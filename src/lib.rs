@@ -2,7 +2,9 @@
 #![doc = include_str!("../README.md")]
 
 pub mod bar;
+pub mod doughnut;
 pub mod functions;
+pub mod pie;
 pub mod scatter;
 pub mod types;
 
