@@ -5,8 +5,8 @@ use crate::{types::*, utils::*, ChartOptions};
 
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct Doughnut<A: Annotation> {
-    #[serde(rename = "type", default = "_doughnut_string")]
-    pub r#type: String,
+    #[serde(rename = "type")]
+    pub r#type: DoughnutString,
     pub data: Dataset<Vec<SinglePointDataset>>,
     pub options: ChartOptions<A>,
     pub id: String,
@@ -18,6 +18,18 @@ impl<A: Annotation> Doughnut<A> {
     }
 }
 
-fn _doughnut_string() -> String {
-    "doughnut".into()
+#[derive(Debug, Clone)]
+pub struct DoughnutString(String);
+impl Serialize for DoughnutString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str("doughnut")
+    }
+}
+impl Default for DoughnutString {
+    fn default() -> Self {
+        Self("doughnut".into())
+    }
 }

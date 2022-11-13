@@ -5,8 +5,8 @@ use crate::{types::*, utils::*, ChartOptions};
 
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct Bar<A: Annotation> {
-    #[serde(rename = "type", default = "_bar_string")]
-    pub r#type: String,
+    #[serde(rename = "type")]
+    pub r#type: BarString,
     pub data: Dataset<Vec<XYDataset>>,
     pub options: ChartOptions<A>,
     pub id: String,
@@ -17,7 +17,18 @@ impl<A: Annotation> Bar<A> {
         Chart(<::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self).unwrap())
     }
 }
-
-fn _bar_string() -> String {
-    "bar".into()
+#[derive(Debug, Clone)]
+pub struct BarString(String);
+impl Serialize for BarString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str("bar")
+    }
+}
+impl Default for BarString {
+    fn default() -> Self {
+        Self("bar".into())
+    }
 }

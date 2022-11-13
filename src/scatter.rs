@@ -5,8 +5,8 @@ use crate::{types::*, utils::*, ChartOptions};
 
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct Scatter<A: Annotation> {
-    #[serde(rename = "type", default = "_scatter_string")]
-    pub r#type: String,
+    #[serde(rename = "type")]
+    pub r#type: ScatterString,
     pub data: Dataset<Vec<XYDataset>>,
     pub options: ChartOptions<A>,
     pub id: String,
@@ -18,6 +18,18 @@ impl<A: Annotation> Scatter<A> {
     }
 }
 
-fn _scatter_string() -> String {
-    "scatter".into()
+#[derive(Debug, Clone)]
+pub struct ScatterString(String);
+impl Serialize for ScatterString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str("scatter")
+    }
+}
+impl Default for ScatterString {
+    fn default() -> Self {
+        Self("scatter".into())
+    }
 }

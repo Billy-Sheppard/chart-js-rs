@@ -154,12 +154,12 @@ impl Model {
                     ..Default::default() // always use `..Default::default()` to make sure this works in the future
                 }]),
             },
-            r#type: "bar".into(),
             options: ChartOptions {
                 maintainAspectRatio: Some(false),
                 ..Default::default() // always use `..Default::default()` to make sure this works in the future
             },
             id: id.into(),
+            ..Default::default()
         };
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
             .prop("id", id)
@@ -203,7 +203,7 @@ impl Model {
                 ..Default::default()
             },
             id: three_id.to_string(),
-            r#type: "doughnut".into(),
+            ..Default::default()
         };
         let four_chart: Pie<NoAnnotations> = Pie {
             data: {
@@ -233,13 +233,13 @@ impl Model {
                 ..Default::default()
             },
             id: four_id.to_string(),
-            r#type: "doughnut".into(),
+            ..Default::default()
         };
         html!("div", {
             .class("columns")
             .children([
                 html!("div", {
-                    .class("column")
+                    .class(["column", "is-half"])
                     .child(
                         html!("canvas", {
                         .prop("id", three_id)
@@ -250,7 +250,7 @@ impl Model {
                     }))
                 }),
                 html!("div", {
-                    .class("column")
+                    .class(["column", "is-half"])
                     .child(
                         html!("canvas", {
                         .prop("id", four_id)
@@ -310,7 +310,7 @@ impl Model {
                     )
                     .child(
                         html!("button", {
-                            .class(["button", "is-success"])
+                            .class(["button", "is-primary"])
                             .class_signal("is-light", self.clone().chart_not_selected("chart_three"))
                             .text("Chart 3")
                             .event({
