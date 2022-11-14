@@ -1,5 +1,6 @@
 use chart_js_rs::{
-    bar::Bar, scatter::Scatter, ChartOptions, Dataset, NoAnnotations, XYDataset, XYPoint,
+    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, ChartOptions, Dataset, NoAnnotations,
+    SinglePointDataset, XYDataset, XYPoint,
 };
 use dominator::{self, events, html, Dom};
 use futures_signals::{
@@ -50,6 +51,7 @@ impl Model {
             move |c, (data, data_2)| match c.to_string().as_str() {
                 "chart_one" => Some(self.clone().show_chart_one(data.to_vec(), data_2.to_vec())),
                 "chart_two" => Some(self.clone().show_chart_two(data.to_vec())),
+                "chart_three" => Some(self.clone().show_chart_three()),
                 _ => None,
             },
         )
@@ -118,6 +120,7 @@ impl Model {
             })
         })
     }
+
     fn show_chart_two(self: Rc<Self>, data: Vec<(usize, usize)>) -> Dom {
         // construct and render chart here
         let id = "chart_two";
@@ -151,12 +154,12 @@ impl Model {
                     ..Default::default() // always use `..Default::default()` to make sure this works in the future
                 }]),
             },
-            r#type: "bar".into(),
             options: ChartOptions {
                 maintainAspectRatio: Some(false),
                 ..Default::default() // always use `..Default::default()` to make sure this works in the future
             },
             id: id.into(),
+            ..Default::default()
         };
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
             .prop("id", id)
@@ -164,6 +167,100 @@ impl Model {
             .after_inserted(move |_| {
                 chart.to_chart().render(id) // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see chart_two and index.html
             })
+        })
+    }
+
+    fn show_chart_three(self: Rc<Self>) -> Dom {
+        // construct and render chart here
+        let three_id = "chart_three_a";
+        let four_id = "chart_three_b";
+
+        let three_a_chart: Doughnut<NoAnnotations> = Doughnut {
+            data: {
+                Dataset {
+                    datasets: {
+                        Vec::from([SinglePointDataset {
+                            data: Some(Vec::from([300.into(), 40.into(), 56.into(), 22.into()])),
+                            backgroundColor: Some(Vec::from([
+                                "dodgerblue".into(),
+                                "limegreen".into(),
+                                "firebrick".into(),
+                                "goldenrod".into(),
+                            ])),
+                            ..Default::default()
+                        }])
+                    },
+                    labels: Some(Vec::from([
+                        "Blueberries".into(),
+                        "Limes".into(),
+                        "Apples".into(),
+                        "Lemons".into(),
+                    ])),
+                }
+            },
+            options: ChartOptions {
+                maintainAspectRatio: Some(false),
+                ..Default::default()
+            },
+            id: three_id.to_string(),
+            ..Default::default()
+        };
+        let three_b_chart: Pie<NoAnnotations> = Pie {
+            data: {
+                Dataset {
+                    datasets: {
+                        Vec::from([SinglePointDataset {
+                            data: Some(Vec::from([300.into(), 40.into(), 56.into(), 22.into()])),
+                            backgroundColor: Some(Vec::from([
+                                "dodgerblue".into(),
+                                "limegreen".into(),
+                                "firebrick".into(),
+                                "goldenrod".into(),
+                            ])),
+                            ..Default::default()
+                        }])
+                    },
+                    labels: Some(Vec::from([
+                        "Blueberries".into(),
+                        "Limes".into(),
+                        "Apples".into(),
+                        "Lemons".into(),
+                    ])),
+                }
+            },
+            options: ChartOptions {
+                maintainAspectRatio: Some(false),
+                ..Default::default()
+            },
+            id: four_id.to_string(),
+            ..Default::default()
+        };
+        html!("div", {
+            .class("columns")
+            .children([
+                html!("div", {
+                    .class(["column", "is-half"])
+                    .child(
+                        html!("canvas", {
+                        .prop("id", three_id)
+                        .style("height", "calc(100vh - 270px)")
+                        .after_inserted(move |_| {
+                            three_a_chart.to_chart().render(three_id)
+                        })
+                    }))
+                }),
+                html!("div", {
+                    .class(["column", "is-half"])
+                    .child(
+                        html!("canvas", {
+                        .prop("id", four_id)
+                        .style("height", "calc(100vh - 270px)")
+                        .after_inserted(move |_| {
+                            three_b_chart.to_chart().render(four_id)
+                        })
+                    }))
+                })
+            ])
         })
     }
 
@@ -207,6 +304,19 @@ impl Model {
                                 let model = self.clone();
                                 move |_: events::Click| {
                                     model.clone().chart.set("chart_two"); // change which chart is in view
+                                }
+                            })
+                        })
+                    )
+                    .child(
+                        html!("button", {
+                            .class(["button", "is-primary"])
+                            .class_signal("is-light", self.clone().chart_not_selected("chart_three"))
+                            .text("Chart 3")
+                            .event({
+                                let model = self.clone();
+                                move |_: events::Click| {
+                                    model.clone().chart.set("chart_three"); // change which chart is in view
                                 }
                             })
                         })

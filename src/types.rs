@@ -64,6 +64,77 @@ impl Serialize for NumberString {
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
+pub struct SinglePointDataset {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<Vec<NumberString>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub barThickness: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backgroundColor: Option<Vec<String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order: Option<NumberString>,
+
+    #[serde(rename = "type")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub r#type: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointRadius: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointHoverRadius: Option<NumberOrDateString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointStyle: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointBackgroundColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointHoverBackgroundColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointBorderColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointBorderWidth: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointHoverBorderWidth: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderWidth: Option<NumberString>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderDash: Option<Vec<NumberString>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderJoinStyle: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hoverBackgroundColor: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stepped: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub yAxisID: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xAxisID: Option<String>,
+}
+impl DatasetTrait for Vec<SinglePointDataset> {}
+
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct XYDataset {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
@@ -286,7 +357,7 @@ pub struct ChartScale {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub beginAtZero: Option<bool>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stacked: Option<bool>,
 }
