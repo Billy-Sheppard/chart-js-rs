@@ -51,7 +51,7 @@ impl Model {
             move |c, (data, data_2)| match c.to_string().as_str() {
                 "chart_one" => Some(self.clone().show_chart_one(data.to_vec(), data_2.to_vec())),
                 "chart_two" => Some(self.clone().show_chart_two(data.to_vec())),
-                "chart_three" => Some(self.clone().show_chart_three_and_four()),
+                "chart_three" => Some(self.clone().show_chart_three()),
                 _ => None,
             },
         )
@@ -170,12 +170,12 @@ impl Model {
         })
     }
 
-    fn show_chart_three_and_four(self: Rc<Self>) -> Dom {
+    fn show_chart_three(self: Rc<Self>) -> Dom {
         // construct and render chart here
-        let three_id = "chart_three";
-        let four_id = "chart_four";
+        let three_id = "chart_three_a";
+        let four_id = "chart_three_b";
 
-        let three_chart: Doughnut<NoAnnotations> = Doughnut {
+        let three_a_chart: Doughnut<NoAnnotations> = Doughnut {
             data: {
                 Dataset {
                     datasets: {
@@ -205,7 +205,7 @@ impl Model {
             id: three_id.to_string(),
             ..Default::default()
         };
-        let four_chart: Pie<NoAnnotations> = Pie {
+        let three_b_chart: Pie<NoAnnotations> = Pie {
             data: {
                 Dataset {
                     datasets: {
@@ -245,7 +245,7 @@ impl Model {
                         .prop("id", three_id)
                         .style("height", "calc(100vh - 270px)")
                         .after_inserted(move |_| {
-                            three_chart.to_chart().render(three_id)
+                            three_a_chart.to_chart().render(three_id)
                         })
                     }))
                 }),
@@ -256,7 +256,7 @@ impl Model {
                         .prop("id", four_id)
                         .style("height", "calc(100vh - 270px)")
                         .after_inserted(move |_| {
-                            four_chart.to_chart().render(four_id)
+                            three_b_chart.to_chart().render(four_id)
                         })
                     }))
                 })
