@@ -1,10 +1,10 @@
-name: "Check Formatting"
+name: "PR Checks"
 on:
   pull_request:
 
 jobs:
   formatting:
-    name: cargo fmt
+    name: Check Code Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -14,3 +14,11 @@ jobs:
           components: rustfmt
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
+  security_audit:
+    name: Rust Audit Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
