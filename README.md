@@ -25,9 +25,9 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
     let id = "[YOUR CHART ID HERE]";
     let chart = chart_js_rs::scatter::Scatter {
         id: id.to_string(),
-        r#type: "scatter".into(),
         options: ChartOptions { .. },
         data: Dataset { .. },
+        ..Default::default()
     };
     // to use any callbacks or functions you use render_mutate and refer to the JS below
     chart.to_chart().render_mutate(&id);
