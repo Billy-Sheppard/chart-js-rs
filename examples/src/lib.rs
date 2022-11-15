@@ -70,15 +70,15 @@ impl Model {
             data: Dataset {
                 datasets: Vec::from([
                     XYDataset {
-                        data:
-                            data.iter()
-                                .map(|d| XYPoint {
-                                    // iterate over our data to construct a dataset
-                                    x: d.0.into(), // use .into() to convert to a NumberorDateString
-                                    y: d.1.into(),
-                                })
-                                .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
-                        
+                        data: data
+                            .iter()
+                            .map(|d| XYPoint {
+                                // iterate over our data to construct a dataset
+                                x: d.0.into(), // use .into() to convert to a NumberorDateString
+                                y: d.1.into(),
+                            })
+                            .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
+
                         borderColor: "red".into(),
                         backgroundColor: "lightcoral".into(),
                         pointRadius: 4.into(),
@@ -86,16 +86,15 @@ impl Model {
                         ..Default::default() // always use `..Default::default()` to make sure this works in the future
                     },
                     XYDataset {
-                        data: 
-                            data_2
-                                .iter()
-                                .map(|d| XYPoint {
-                                    // iterate over our data to construct a dataset
-                                    x: d.0.into(), // use .into() to convert to a NumberorDateString
-                                    y: d.1.into(),
-                                })
-                                .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
-                        
+                        data: data_2
+                            .iter()
+                            .map(|d| XYPoint {
+                                // iterate over our data to construct a dataset
+                                x: d.0.into(), // use .into() to convert to a NumberorDateString
+                                y: d.1.into(),
+                            })
+                            .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
+
                         borderColor: "blue".into(),
                         backgroundColor: "lightskyblue".into(),
                         pointRadius: 4.into(),
@@ -136,16 +135,16 @@ impl Model {
                         .collect(),
                 ),
                 datasets: Vec::from([XYDataset {
-                    data: 
-                        data.iter()
-                            .enumerate()
-                            .map(|(x, d)| XYPoint {
-                                // iterate over our data to construct a dataset
-                                x: (x + 1).into(), // use enumerate to give us our X axis point
-                                y: d.1.into(),
-                            })
-                            .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
-                    
+                    data: data
+                        .iter()
+                        .enumerate()
+                        .map(|(x, d)| XYPoint {
+                            // iterate over our data to construct a dataset
+                            x: (x + 1).into(), // use enumerate to give us our X axis point
+                            y: d.1.into(),
+                        })
+                        .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
+
                     backgroundColor: "palegreen".into(),
                     borderColor: "green".into(),
                     borderWidth: 2.into(),

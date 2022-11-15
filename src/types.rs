@@ -35,7 +35,7 @@ impl Serialize for NumberOrDateString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
-    {   
+    {
         let fnum: Result<f64, _> = self.0.parse();
         let inum: Result<i64, _> = self.0.parse();
         match (fnum, inum) {
