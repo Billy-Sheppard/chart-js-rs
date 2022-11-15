@@ -14,7 +14,7 @@ pub struct Pie<A: Annotation> {
 
 impl<A: Annotation> Pie<A> {
     pub fn to_chart(self) -> Chart {
-        Chart(<::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self).unwrap())
+        Chart(<::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self).unwrap(), self.id)
     }
 }
 
