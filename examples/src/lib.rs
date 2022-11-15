@@ -70,36 +70,35 @@ impl Model {
             data: Dataset {
                 datasets: Vec::from([
                     XYDataset {
-                        data: Some(
-                            data.iter()
-                                .map(|d| XYPoint {
-                                    // iterate over our data to construct a dataset
-                                    x: Some(d.0.into()), // use .into() to convert to a NumberorDateString
-                                    y: Some(d.1.into()),
-                                })
-                                .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
-                        ),
-                        borderColor: Some("red".into()),
-                        backgroundColor: Some("lightcoral".into()),
-                        pointRadius: Some(4.into()),
-                        label: Some("Dataset 1".into()),
+                        data: data
+                            .iter()
+                            .map(|d| XYPoint {
+                                // iterate over our data to construct a dataset
+                                x: d.0.into(), // use .into() to convert to a NumberorDateString
+                                y: d.1.into(),
+                            })
+                            .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
+
+                        borderColor: "red".into(),
+                        backgroundColor: "lightcoral".into(),
+                        pointRadius: 4.into(),
+                        label: "Dataset 1".into(),
                         ..Default::default() // always use `..Default::default()` to make sure this works in the future
                     },
                     XYDataset {
-                        data: Some(
-                            data_2
-                                .iter()
-                                .map(|d| XYPoint {
-                                    // iterate over our data to construct a dataset
-                                    x: Some(d.0.into()), // use .into() to convert to a NumberorDateString
-                                    y: Some(d.1.into()),
-                                })
-                                .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
-                        ),
-                        borderColor: Some("blue".into()),
-                        backgroundColor: Some("lightskyblue".into()),
-                        pointRadius: Some(4.into()),
-                        label: Some("Dataset 2".into()),
+                        data: data_2
+                            .iter()
+                            .map(|d| XYPoint {
+                                // iterate over our data to construct a dataset
+                                x: d.0.into(), // use .into() to convert to a NumberorDateString
+                                y: d.1.into(),
+                            })
+                            .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
+
+                        borderColor: "blue".into(),
+                        backgroundColor: "lightskyblue".into(),
+                        pointRadius: 4.into(),
+                        label: "Dataset 2".into(),
                         ..Default::default() // always use `..Default::default()` to make sure this works in the future
                     },
                 ]),
@@ -116,7 +115,7 @@ impl Model {
             .prop("id", id)
             .style("height", "calc(100vh - 270px)")
             .after_inserted(move |_| {
-                chart.to_chart().render_mutate(id) // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see chart_two and index.html
+                chart.to_chart().render_mutate() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see chart_two and index.html
             })
         })
     }
@@ -136,21 +135,21 @@ impl Model {
                         .collect(),
                 ),
                 datasets: Vec::from([XYDataset {
-                    data: Some(
-                        data.iter()
-                            .enumerate()
-                            .map(|(x, d)| XYPoint {
-                                // iterate over our data to construct a dataset
-                                x: Some((x + 1).into()), // use enumerate to give us our X axis point
-                                y: Some(d.1.into()),
-                            })
-                            .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
-                    ),
-                    backgroundColor: Some("palegreen".into()),
-                    borderColor: Some("green".into()),
-                    borderWidth: Some(2.into()),
-                    label: Some("Dataset 1".into()),
-                    yAxisID: Some("y".into()),
+                    data: data
+                        .iter()
+                        .enumerate()
+                        .map(|(x, d)| XYPoint {
+                            // iterate over our data to construct a dataset
+                            x: (x + 1).into(), // use enumerate to give us our X axis point
+                            y: d.1.into(),
+                        })
+                        .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
+
+                    backgroundColor: "palegreen".into(),
+                    borderColor: "green".into(),
+                    borderWidth: 2.into(),
+                    label: "Dataset 1".into(),
+                    yAxisID: "y".into(),
                     ..Default::default() // always use `..Default::default()` to make sure this works in the future
                 }]),
             },
@@ -165,7 +164,7 @@ impl Model {
             .prop("id", id)
             .style("height", "calc(100vh - 270px)")
             .after_inserted(move |_| {
-                chart.to_chart().render(id) // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see chart_two and index.html
+                chart.to_chart().render() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see chart_two and index.html
             })
         })
     }
@@ -180,13 +179,13 @@ impl Model {
                 Dataset {
                     datasets: {
                         Vec::from([SinglePointDataset {
-                            data: Some(Vec::from([300.into(), 40.into(), 56.into(), 22.into()])),
-                            backgroundColor: Some(Vec::from([
+                            data: Vec::from([300.into(), 40.into(), 56.into(), 22.into()]),
+                            backgroundColor: Vec::from([
                                 "dodgerblue".into(),
                                 "limegreen".into(),
                                 "firebrick".into(),
                                 "goldenrod".into(),
-                            ])),
+                            ]),
                             ..Default::default()
                         }])
                     },
@@ -210,13 +209,13 @@ impl Model {
                 Dataset {
                     datasets: {
                         Vec::from([SinglePointDataset {
-                            data: Some(Vec::from([300.into(), 40.into(), 56.into(), 22.into()])),
-                            backgroundColor: Some(Vec::from([
+                            data: Vec::from([300.into(), 40.into(), 56.into(), 22.into()]),
+                            backgroundColor: Vec::from([
                                 "dodgerblue".into(),
                                 "limegreen".into(),
                                 "firebrick".into(),
                                 "goldenrod".into(),
-                            ])),
+                            ]),
                             ..Default::default()
                         }])
                     },
@@ -245,7 +244,7 @@ impl Model {
                         .prop("id", three_id)
                         .style("height", "calc(100vh - 270px)")
                         .after_inserted(move |_| {
-                            three_a_chart.to_chart().render(three_id)
+                            three_a_chart.to_chart().render()
                         })
                     }))
                 }),
@@ -256,7 +255,7 @@ impl Model {
                         .prop("id", four_id)
                         .style("height", "calc(100vh - 270px)")
                         .after_inserted(move |_| {
-                            three_b_chart.to_chart().render(four_id)
+                            three_b_chart.to_chart().render()
                         })
                     }))
                 })

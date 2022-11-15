@@ -14,7 +14,10 @@ pub struct Bar<A: Annotation> {
 
 impl<A: Annotation> Bar<A> {
     pub fn to_chart(self) -> Chart {
-        Chart(<::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self).unwrap())
+        Chart(
+            <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self).unwrap(),
+            self.id,
+        )
     }
 }
 #[derive(Debug, Clone)]

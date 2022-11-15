@@ -30,10 +30,10 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
         ..Default::default()
     };
     // to use any callbacks or functions you use render_mutate and refer to the JS below
-    chart.to_chart().render_mutate(&id);
+    chart.to_chart().render_mutate();
 
     // else use render
-    chart.to_chart().render(id);
+    chart.to_chart().render();
 ```
 
 ### Your html file:
