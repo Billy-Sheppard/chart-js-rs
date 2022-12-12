@@ -38,7 +38,7 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 ### Your html file:
 ```html
-<script src="https://cdn.jsdelivr.net/npm/chart.js@^3"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@^4"></script>
 
 ...
 
