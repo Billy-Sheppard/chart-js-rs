@@ -261,6 +261,9 @@ pub struct XYDataset {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub yAxisID: String,
 
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub fill: String,
+
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub base: NumberString,
 
@@ -655,6 +658,9 @@ pub struct ChartTooltips {
 
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct ChartLegend {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display: Option<bool>,
+    
     #[serde(skip_serializing_if = "String::is_empty")]
     pub position: String,
 
