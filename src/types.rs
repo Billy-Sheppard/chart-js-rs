@@ -12,13 +12,13 @@ impl DatasetTrait for NoDatasets {}
 pub struct NoAnnotations {}
 impl Annotation for NoAnnotations {}
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Dataset<D: DatasetTrait> {
     pub datasets: D,
     pub labels: Option<Vec<NumberOrDateString>>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(transparent)]
 pub struct NumberOrDateString(String);
 impl NumberOrDateString {
@@ -45,7 +45,7 @@ impl Serialize for NumberOrDateString {
         }
     }
 }
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(transparent)]
 pub struct NumberString(String);
 impl NumberString {
@@ -73,7 +73,7 @@ impl Serialize for NumberString {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SinglePointDataset {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub backgroundColor: Vec<String>,
@@ -189,7 +189,7 @@ pub struct SinglePointDataset {
 }
 impl DatasetTrait for Vec<SinglePointDataset> {}
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct XYDataset {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub backgroundColor: String,
@@ -314,7 +314,7 @@ pub struct XYDataset {
 }
 impl DatasetTrait for Vec<XYDataset> {}
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct XYPoint {
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty")]
     pub x: NumberOrDateString,
@@ -323,7 +323,7 @@ pub struct XYPoint {
     pub y: NumberString,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
 pub struct ChartOptions<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub plugins: Option<ChartPlugins<A>>,
@@ -356,13 +356,13 @@ pub struct ChartOptions<A: Annotation> {
     pub responsive: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Animation {
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub duration: NumberString,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
 pub struct ChartPlugins<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub autocolors: Option<bool>,
@@ -380,7 +380,7 @@ pub struct ChartPlugins<A: Annotation> {
     pub legend: Option<PluginLegend>,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PluginLegend {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
@@ -389,13 +389,13 @@ pub struct PluginLegend {
     pub labels: Option<LegendLabel>,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
 pub struct Annotations<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<HashMap<String, A>>,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TooltipPlugins {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
@@ -422,7 +422,7 @@ pub struct TooltipPlugins {
     pub titleMarginBottom: NumberString,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChartScale {
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -489,7 +489,7 @@ pub struct ChartScale {
     pub weight: NumberString,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ScaleBorder {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
@@ -510,7 +510,7 @@ pub struct ScaleBorder {
     pub z: NumberString,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Grid {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
@@ -519,7 +519,7 @@ pub struct Grid {
     pub drawOnChartArea: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LineAnnotation {
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -544,7 +544,7 @@ pub struct LineAnnotation {
     pub borderWidth: NumberString,
 }
 impl Annotation for LineAnnotation {}
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BoxAnnotation {
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -579,7 +579,7 @@ pub struct BoxAnnotation {
 }
 impl Annotation for BoxAnnotation {}
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ScaleTime {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub displayFormats: Option<DisplayFormats>,
@@ -587,7 +587,7 @@ pub struct ScaleTime {
     pub unit: String,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DisplayFormats {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub year: String,
@@ -611,7 +611,7 @@ pub struct DisplayFormats {
     pub minute: String,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ScaleTicks {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub align: String,
@@ -629,7 +629,7 @@ pub struct ScaleTicks {
     pub precision: NumberString,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Title {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub text: String,
@@ -638,7 +638,7 @@ pub struct Title {
     pub display: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChartInteraction {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub intersect: Option<bool>,
@@ -650,13 +650,13 @@ pub struct ChartInteraction {
     pub axis: String,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChartTooltips {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub position: String,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChartLegend {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
@@ -668,7 +668,7 @@ pub struct ChartLegend {
     pub labels: Option<LegendLabel>,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LegendLabel {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub usePointStyle: Option<bool>,
@@ -686,7 +686,7 @@ pub struct LegendLabel {
     pub pointStyleWidth: NumberString,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChartElements {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bar: Option<BarElementConfiguration>,
@@ -698,7 +698,7 @@ pub struct ChartElements {
     pub point: Option<PointElementConfiguration>,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BarElementConfiguration {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fill: Option<bool>,
@@ -713,7 +713,7 @@ pub struct BarElementConfiguration {
     pub hoverBorderWidth: NumberString,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LineElementConfiguration {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fill: Option<bool>,
@@ -725,7 +725,7 @@ pub struct LineElementConfiguration {
     pub cubicInterpolationMode: String,
 }
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PointElementConfiguration {
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub radius: NumberString,
