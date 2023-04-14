@@ -3,12 +3,13 @@ use chart_js_rs::{
     SinglePointDataset, XYDataset, XYPoint,
 };
 use dominator::{self, events, html, Dom};
-use futures_signals::{
-    internal,
-    signal::{Mutable, Signal, SignalExt},
-};
+use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
 use rand::Rng;
-use std::rc::Rc;
+use std::{
+    pin::Pin,
+    rc::Rc,
+    task::{Context, Poll},
+};
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
 fn random() -> Vec<(usize, usize)> {
@@ -41,14 +42,8 @@ impl Model {
     }
 
     fn show_charts(self: Rc<Self>) -> impl Signal<Item = Option<Dom>> {
-        internal::Map2::new(
-            self.chart.signal(),
-            internal::Map2::new(
-                self.data.signal_cloned(),
-                self.data_2.signal_cloned(),
-                |data, data_2| (data.clone(), data_2.clone()),
-            ),
-            move |c, (data, data_2)| match c.to_string().as_str() {
+        Mutable3::new(self.chart.clone(), self.data.clone(), self.data_2.clone()).map(
+            move |(c, data, data_2)| match c.to_string().as_str() {
                 "chart_one" => Some(self.clone().show_chart_one(data.to_vec(), data_2.to_vec())),
                 "chart_two" => Some(self.clone().show_chart_two(data.to_vec())),
                 "chart_three" => Some(self.clone().show_chart_three()),
@@ -129,9 +124,7 @@ impl Model {
             data: Dataset {
                 labels: Some(
                     // use a range to give us our X axis labels
-                    (0..data.len())
-                        .map(|d| (d + 1).into())
-                        .collect(),
+                    (0..data.len()).map(|d| (d + 1).into()).collect(),
                 ),
                 datasets: Vec::from([XYDataset {
                     data: data
@@ -338,4 +331,82 @@ pub async fn main_js() -> Result<(), JsValue> {
     dominator::append_dom(&dominator::body(), Model::render(app));
 
     Ok(())
+}
+
+pub struct Mutable3<A, B, C>(
+    (MutableSignalCloned<A>, Mutable<A>),
+    (MutableSignalCloned<B>, Mutable<B>),
+    (MutableSignalCloned<C>, Mutable<C>),
+)
+where
+    A: Clone,
+    B: Clone,
+    C: Clone;
+impl<A, B, C> Mutable3<A, B, C>
+where
+    A: Clone,
+    B: Clone,
+    C: Clone,
+{
+    pub fn new(a: Mutable<A>, b: Mutable<B>, c: Mutable<C>) -> Self {
+        Mutable3(
+            (a.signal_cloned(), a),
+            (b.signal_cloned(), b),
+            (c.signal_cloned(), c),
+        )
+    }
+}
+impl<A, B, C> Signal for Mutable3<A, B, C>
+where
+    A: Clone,
+    B: Clone,
+    C: Clone,
+{
+    type Item = (A, B, C);
+
+    fn poll_change(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        let a = Pin::new(&mut self.0 .0).poll_change(cx);
+        let b = Pin::new(&mut self.1 .0).poll_change(cx);
+        let c = Pin::new(&mut self.2 .0).poll_change(cx);
+        let mut changed = false;
+
+        let left_done = match a {
+            Poll::Ready(None) => true,
+            Poll::Ready(_) => {
+                changed = true;
+                false
+            }
+            Poll::Pending => false,
+        };
+
+        let middle_done = match b {
+            Poll::Ready(None) => true,
+            Poll::Ready(_) => {
+                changed = true;
+                false
+            }
+            Poll::Pending => false,
+        };
+
+        let right_done = match c {
+            Poll::Ready(None) => true,
+            Poll::Ready(_) => {
+                changed = true;
+                false
+            }
+            Poll::Pending => false,
+        };
+
+        if changed {
+            Poll::Ready(Some((
+                self.0 .1.get_cloned(),
+                self.1 .1.get_cloned(),
+                self.2 .1.get_cloned(),
+            )))
+        } else if left_done && middle_done && right_done {
+            Poll::Ready(None)
+        } else {
+            Poll::Pending
+        }
+    }
 }
