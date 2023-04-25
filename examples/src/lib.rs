@@ -1,6 +1,6 @@
 use chart_js_rs::{
-    bar::Bar, doughnut::Doughnut, line::Line, pie::Pie, scatter::Scatter,
-    ChartOptions, Dataset, NoAnnotations, SinglePointDataset, XYDataset, XYPoint,
+    bar::Bar, doughnut::Doughnut, line::Line, pie::Pie, scatter::Scatter, ChartOptions, Dataset,
+    NoAnnotations, SinglePointDataset, XYDataset, XYPoint,
 };
 use dominator::{self, events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
@@ -47,8 +47,8 @@ impl Model {
                 "chart_one" => Some(self.clone().show_chart_one(data.to_vec(), data_2.to_vec())),
                 "chart_two" => Some(self.clone().show_chart_two(data.to_vec())),
                 "chart_three" => Some(self.clone().show_chart_three()),
-                "chart_line" => Some(self.clone().show_chart_line(data.to_vec(),false)),
-                "chart_line_time" => Some(self.clone().show_chart_line(data.to_vec(),true)),
+                "chart_line" => Some(self.clone().show_chart_line(data.to_vec(), false)),
+                "chart_line_time" => Some(self.clone().show_chart_line(data.to_vec(), true)),
                 _ => None,
             },
         )
@@ -258,25 +258,36 @@ impl Model {
     }
 
     fn show_chart_line(self: Rc<Self>, data: Vec<(usize, usize)>, time: bool) -> Dom {
-        let id = if time {"chart_line_time"} else { "chart_line"};
+        let id = if time {
+            "chart_line_time"
+        } else {
+            "chart_line"
+        };
 
         let chart = Line::<NoAnnotations> {
             // we use <NoAnnotations> here to type hint for the compiler
             data: Dataset {
                 datasets: Vec::from([SinglePointDataset {
-                    data: Vec::from(
-                        data.iter()
-                            .map(|d| d.1.to_string().into())
-                            .collect::<Vec<_>>(),
-                    ),
-                    label:"Line 1".to_string(),
+                    data: data
+                        .iter()
+                        .map(|d| d.1.to_string().into())
+                        .collect::<Vec<_>>(),
+
+                    label: "Line 1".to_string(),
                     ..Default::default()
                 }]),
-                labels: Some(Vec::from(
-                    (0..data.len()).map(|x| (if time {x.to_string()+":12:15"} else {x.to_string()}).into()).collect::<Vec<_>>(),
-                )),
-
-                ..Default::default()
+                labels: Some(
+                    (0..data.len())
+                        .map(|x| {
+                            (if time {
+                                x.to_string() + ":12:15"
+                            } else {
+                                x.to_string()
+                            })
+                            .into()
+                        })
+                        .collect::<Vec<_>>(),
+                ),
             },
             options: ChartOptions {
                 maintainAspectRatio: Some(false),

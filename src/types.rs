@@ -660,7 +660,7 @@ pub struct ChartTooltips {
 pub struct ChartLegend {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
-    
+
     #[serde(skip_serializing_if = "String::is_empty")]
     pub position: String,
 
