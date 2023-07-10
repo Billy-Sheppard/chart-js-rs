@@ -16,3 +16,7 @@ impl Chart {
         render_chart(self.0, &self.1, true);
     }
 }
+
+pub fn some_false() -> Option<bool> {
+    Some(false)
+}

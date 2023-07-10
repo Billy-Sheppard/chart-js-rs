@@ -22,7 +22,7 @@ pub struct Dataset<D: DatasetTrait> {
 #[serde(transparent)]
 pub struct NumberOrDateString(String);
 impl NumberOrDateString {
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 }
@@ -47,9 +47,36 @@ impl Serialize for NumberOrDateString {
 }
 #[derive(Debug, Clone, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(transparent)]
+pub struct BoolString(String);
+impl BoolString {
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+impl<T: Display> From<T> for BoolString {
+    fn from(s: T) -> Self {
+        Self(s.to_string())
+    }
+}
+impl Serialize for BoolString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let bool_: Result<bool, _> = self.0.parse();
+        let auto: Result<String, _> = self.0.parse();
+        match (bool_, auto) {
+            (Ok(_), Ok(auto)) if auto.as_str() == "auto" => serializer.serialize_str("auto"),
+            (Ok(bool_), _) => serializer.serialize_bool(bool_),
+            _ => serializer.serialize_str("auto"),
+        }
+    }
+}
+#[derive(Debug, Clone, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(transparent)]
 pub struct NumberString(String);
 impl NumberString {
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 }
@@ -212,6 +239,8 @@ pub struct XYDataset {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub data: Vec<XYPoint>,
 
+    pub datalabels: DataLabels,
+
     #[serde(skip_serializing_if = "String::is_empty")]
     pub hoverBackgroundColor: String,
 
@@ -311,6 +340,9 @@ pub struct XYDataset {
 
     #[serde(skip_serializing_if = "String::is_empty")]
     pub stack: String,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub z: NumberString,
 }
 impl DatasetTrait for Vec<XYDataset> {}
 
@@ -387,6 +419,9 @@ pub struct PluginLegend {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub labels: Option<LegendLabel>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reverse: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
@@ -534,6 +569,12 @@ pub struct LineAnnotation {
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty")]
     pub xMax: NumberOrDateString,
 
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty")]
+    pub yMin: NumberOrDateString,
+
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty")]
+    pub yMax: NumberOrDateString,
+
     #[serde(skip_serializing_if = "String::is_empty")]
     pub borderColor: String,
 
@@ -542,6 +583,9 @@ pub struct LineAnnotation {
 
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub borderWidth: NumberString,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub yScaleID: NumberString,
 }
 impl Annotation for LineAnnotation {}
 #[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -660,7 +704,7 @@ pub struct ChartTooltips {
 pub struct ChartLegend {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
-    
+
     #[serde(skip_serializing_if = "String::is_empty")]
     pub position: String,
 
@@ -741,4 +785,46 @@ pub struct PointElementConfiguration {
 
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub hoverBorderWidth: NumberString,
+}
+
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DataLabels {
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub align: String,
+
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub anchor: String,
+
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub backgroundColor: String,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub borderRadius: NumberString,
+
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub color: String,
+
+    #[serde(default = "BoolString::is_empty")]
+    pub display: Option<BoolString>,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub offset: NumberString,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub padding: Option<Padding>,
+}
+
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Padding {
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub top: NumberString,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub bottom: NumberString,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub left: NumberString,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub right: NumberString,
 }
