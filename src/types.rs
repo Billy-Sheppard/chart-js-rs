@@ -1,6 +1,7 @@
-use serde::{Deserialize, Serialize};
-use std::option::Option;
-use std::{collections::HashMap, fmt::Display};
+use {
+    serde::{Deserialize, Serialize},
+    std::{collections::HashMap, fmt::Display, option::Option},
+};
 
 pub trait DatasetTrait: Serialize {}
 pub trait Annotation: Serialize {}
@@ -21,6 +22,11 @@ pub struct Dataset<D: DatasetTrait> {
 #[derive(Debug, Clone, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(transparent)]
 pub struct NumberOrDateString(String);
+impl From<NumberString> for NumberOrDateString {
+    fn from(value: NumberString) -> Self {
+        value.0.into()
+    }
+}
 impl NumberOrDateString {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -29,6 +35,11 @@ impl NumberOrDateString {
 impl<T: Display> From<T> for NumberOrDateString {
     fn from(s: T) -> Self {
         Self(s.to_string())
+    }
+}
+impl ToString for NumberOrDateString {
+    fn to_string(&self) -> String {
+        self.0.to_string()
     }
 }
 impl Serialize for NumberOrDateString {
@@ -64,17 +75,22 @@ impl Serialize for BoolString {
         S: serde::Serializer,
     {
         let bool_: Result<bool, _> = self.0.parse();
-        let auto: Result<String, _> = self.0.parse();
-        match (bool_, auto) {
-            (Ok(_), Ok(auto)) if auto.as_str() == "auto" => serializer.serialize_str("auto"),
+        let any: Result<String, _> = self.0.parse();
+        match (bool_, any) {
             (Ok(bool_), _) => serializer.serialize_bool(bool_),
-            _ => serializer.serialize_str("auto"),
+            (_, Ok(any)) => serializer.serialize_str(&any),
+            _ => unreachable!(),
         }
     }
 }
 #[derive(Debug, Clone, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(transparent)]
 pub struct NumberString(String);
+impl From<NumberOrDateString> for NumberString {
+    fn from(value: NumberOrDateString) -> Self {
+        value.0.into()
+    }
+}
 impl NumberString {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -83,6 +99,11 @@ impl NumberString {
 impl<T: Display> From<T> for NumberString {
     fn from(s: T) -> Self {
         Self(s.to_string())
+    }
+}
+impl ToString for NumberString {
+    fn to_string(&self) -> String {
+        self.0.to_string()
     }
 }
 impl Serialize for NumberString {
@@ -239,7 +260,14 @@ pub struct XYDataset {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub data: Vec<XYPoint>,
 
-    pub datalabels: DataLabels,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub datalabels: Option<DataLabels>,
+
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub description: String,
+
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub category_label: String,
 
     #[serde(skip_serializing_if = "String::is_empty")]
     pub hoverBackgroundColor: String,
@@ -271,6 +299,9 @@ pub struct XYDataset {
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub pointRadius: NumberString,
 
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub pointHitRadius: NumberString,
+
     #[serde(skip_serializing_if = "String::is_empty")]
     pub pointStyle: String,
 
@@ -279,7 +310,7 @@ pub struct XYDataset {
     pub r#type: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub stepped: Option<bool>,
+    pub stepped: Option<BoolString>,
 
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub tension: NumberString,
@@ -353,6 +384,23 @@ pub struct XYPoint {
 
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub y: NumberString,
+
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub description: String,
+}
+
+impl<T: std::fmt::Display, U: std::fmt::Display> From<(T, U)> for XYPoint {
+    fn from((x, y): (T, U)) -> Self
+    where
+        T: Into<NumberOrDateString>,
+        U: Into<NumberString>,
+    {
+        XYPoint {
+            x: x.into(),
+            y: y.into(),
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
@@ -718,6 +766,9 @@ pub struct LegendLabel {
     pub usePointStyle: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub useBorderRadius: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub boxHeight: Option<usize>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -801,8 +852,14 @@ pub struct DataLabels {
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub borderRadius: NumberString,
 
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub drawTime: NumberString,
+
     #[serde(skip_serializing_if = "String::is_empty")]
     pub color: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clip: Option<bool>,
 
     #[serde(default = "BoolString::is_empty")]
     pub display: Option<BoolString>,
@@ -812,6 +869,12 @@ pub struct DataLabels {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub padding: Option<Padding>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub font: Option<Font>,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub z: NumberString,
 }
 
 #[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -827,4 +890,19 @@ pub struct Padding {
 
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub right: NumberString,
+}
+
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Font {
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub size: NumberString,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub style: NumberString,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub weight: NumberString,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub lineHeight: NumberString,
 }

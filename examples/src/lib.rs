@@ -71,6 +71,7 @@ impl Model {
                                 // iterate over our data to construct a dataset
                                 x: d.0.into(), // use .into() to convert to a NumberorDateString
                                 y: d.1.into(),
+                                ..Default::default() // always use `..Default::default()` to make sure this works in the future
                             })
                             .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
 
@@ -87,6 +88,7 @@ impl Model {
                                 // iterate over our data to construct a dataset
                                 x: d.0.into(), // use .into() to convert to a NumberorDateString
                                 y: d.1.into(),
+                                ..Default::default() // always use `..Default::default()` to make sure this works in the future
                             })
                             .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
 
@@ -134,6 +136,7 @@ impl Model {
                             // iterate over our data to construct a dataset
                             x: (x + 1).into(), // use enumerate to give us our X axis point
                             y: d.1.into(),
+                            ..Default::default() // always use `..Default::default()` to make sure this works in the future
                         })
                         .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
 

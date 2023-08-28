@@ -1,6 +1,6 @@
 [package]
 name = "chart-js-rs"
-version = "0.0.10"
+version = "0.0.11"
 edition = "2021"
 authors = ["Billy Sheppard", "Luis Moreno"]
 license = "Apache-2.0"
@@ -14,7 +14,7 @@ homepage = "https://github.com/Billy-Sheppard/chart-js-rs"
 [dependencies]
 serde = { version = "1.0.137", features = ["derive"] }
 wasm-bindgen = { version = "0.2.84" }
-gloo-utils = { version = "0.1", features = ["serde"] }
+gloo-utils = { version = "0.2", features = ["serde"] }
 serde_json = "1"
 thiserror = "1"
 js-sys = "0.3.61"
