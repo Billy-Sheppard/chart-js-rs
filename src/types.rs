@@ -728,6 +728,9 @@ pub struct Title {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub font: Option<Font>,
 }
 
 #[derive(Debug, Clone, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
