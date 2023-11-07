@@ -4,6 +4,7 @@
 pub mod bar;
 pub mod doughnut;
 pub mod functions;
+pub mod line;
 pub mod pie;
 pub mod scatter;
 pub mod types;

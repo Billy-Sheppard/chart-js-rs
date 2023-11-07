@@ -1,6 +1,6 @@
 use chart_js_rs::{
-    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, ChartOptions, Dataset, NoAnnotations,
-    SinglePointDataset, XYDataset, XYPoint,
+    bar::Bar, doughnut::Doughnut, line::Line, pie::Pie, scatter::Scatter, ChartOptions, Dataset,
+    NoAnnotations, SinglePointDataset, XYDataset, XYPoint,
 };
 use dominator::{self, events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
@@ -47,6 +47,8 @@ impl Model {
                 "chart_one" => Some(self.clone().show_chart_one(data.to_vec(), data_2.to_vec())),
                 "chart_two" => Some(self.clone().show_chart_two(data.to_vec())),
                 "chart_three" => Some(self.clone().show_chart_three()),
+                "chart_line" => Some(self.clone().show_chart_line(data.to_vec(), false)),
+                "chart_line_time" => Some(self.clone().show_chart_line(data.to_vec(), true)),
                 _ => None,
             },
         )
@@ -258,6 +260,54 @@ impl Model {
         })
     }
 
+    fn show_chart_line(self: Rc<Self>, data: Vec<(usize, usize)>, time: bool) -> Dom {
+        let id = if time {
+            "chart_line_time"
+        } else {
+            "chart_line"
+        };
+
+        let chart = Line::<NoAnnotations> {
+            // we use <NoAnnotations> here to type hint for the compiler
+            data: Dataset {
+                datasets: Vec::from([SinglePointDataset {
+                    data: data
+                        .iter()
+                        .map(|d| d.1.to_string().into())
+                        .collect::<Vec<_>>(),
+
+                    label: "Line 1".to_string(),
+                    ..Default::default()
+                }]),
+                labels: Some(
+                    (0..data.len())
+                        .map(|x| {
+                            (if time {
+                                x.to_string() + ":12:15"
+                            } else {
+                                x.to_string()
+                            })
+                            .into()
+                        })
+                        .collect::<Vec<_>>(),
+                ),
+            },
+            options: ChartOptions {
+                maintainAspectRatio: Some(false),
+                ..Default::default() // always use `..Default::default()` to make sure this works in the future
+            },
+            id: id.into(),
+            ..Default::default()
+        };
+        html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
+            .prop("id", id)
+            .style("height", "calc(100vh - 270px)")
+            .after_inserted(move |_| {
+                chart.to_chart().render_mutate() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see chart_two and index.html
+            })
+        })
+    }
+
     fn render(self: Rc<Self>) -> Dom {
         html!("div", {
             .class("section")
@@ -311,6 +361,32 @@ impl Model {
                                 let model = self.clone();
                                 move |_: events::Click| {
                                     model.clone().chart.set("chart_three"); // change which chart is in view
+                                }
+                            })
+                        })
+                    )
+                    .child(
+                        html!("button", {
+                            .class(["button", "is-primary"])
+                            .class_signal("is-light", self.clone().chart_not_selected("chart_line"))
+                            .text("Chart line")
+                            .event({
+                                let model = self.clone();
+                                move |_: events::Click| {
+                                    model.clone().chart.set("chart_line"); // change which chart is in view
+                                }
+                            })
+                        })
+                    )
+                    .child(
+                        html!("button", {
+                            .class(["button", "is-primary"])
+                            .class_signal("is-light", self.clone().chart_not_selected("chart_line_time"))
+                            .text("Chart line(Time)")
+                            .event({
+                                let model = self.clone();
+                                move |_: events::Click| {
+                                    model.clone().chart.set("chart_line_time"); // change which chart is in view
                                 }
                             })
                         })
