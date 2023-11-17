@@ -1,6 +1,6 @@
 use chart_js_rs::{
-    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, ChartOptions, Dataset, NoAnnotations,
-    SinglePointDataset, XYDataset, XYPoint,
+    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, ChartOptions, Dataset,
+    DatasetDataExt, NoAnnotations, SinglePointDataset, XYDataset, XYPoint,
 };
 use dominator::{self, events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
@@ -73,7 +73,8 @@ impl Model {
                                 y: d.1.into(),
                                 ..Default::default() // always use `..Default::default()` to make sure this works in the future
                             })
-                            .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
+                            .collect::<Vec<_>>()
+                            .to_dataset_data(), // collect into a Vec<XYPoint>
 
                         borderColor: "red".into(),
                         backgroundColor: "lightcoral".into(),
@@ -90,7 +91,8 @@ impl Model {
                                 y: d.1.into(),
                                 ..Default::default() // always use `..Default::default()` to make sure this works in the future
                             })
-                            .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
+                            .collect::<Vec<_>>()
+                            .to_dataset_data(), // collect into a Vec<XYPoint>
 
                         borderColor: "blue".into(),
                         backgroundColor: "lightskyblue".into(),
@@ -138,7 +140,8 @@ impl Model {
                             y: d.1.into(),
                             ..Default::default() // always use `..Default::default()` to make sure this works in the future
                         })
-                        .collect::<Vec<_>>(), // collect into a Vec<XYPoint>
+                        .collect::<Vec<_>>()
+                        .to_dataset_data(), // collect into a Vec<XYPoint>
 
                     backgroundColor: "palegreen".into(),
                     borderColor: "green".into(),

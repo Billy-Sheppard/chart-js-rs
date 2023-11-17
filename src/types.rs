@@ -4,6 +4,37 @@ use {
 };
 
 pub trait DatasetTrait: Serialize {}
+pub trait DatasetDataExt: Serialize {
+    fn to_dataset_data(self) -> DatasetData
+    where
+        Self: Sized + Serialize,
+    {
+        DatasetData(serde_json::to_value(self).unwrap())
+    }
+}
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[serde(transparent)]
+pub struct DatasetData(serde_json::Value);
+impl DatasetData {
+    fn is_empty(&self) -> bool {
+        serde_json::to_value(self)
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .is_empty()
+    }
+}
+impl PartialOrd for DatasetData {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for DatasetData {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.to_string().cmp(&other.0.to_string())
+    }
+}
+
 pub trait Annotation: Serialize {}
 
 #[derive(Debug, Serialize, Default)]
@@ -216,6 +247,9 @@ pub struct SinglePointDataset {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub pointStyle: String,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub datalabels: Option<DataLabels>,
+
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "String::is_empty")]
     pub r#type: String,
@@ -257,8 +291,8 @@ pub struct XYDataset {
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub borderWidth: NumberString,
 
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub data: Vec<XYPoint>,
+    #[serde(skip_serializing_if = "DatasetData::is_empty")]
+    pub data: DatasetData,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub datalabels: Option<DataLabels>,
@@ -301,6 +335,9 @@ pub struct XYDataset {
 
     #[serde(skip_serializing_if = "NumberString::is_empty")]
     pub pointHitRadius: NumberString,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub hitRadius: NumberString,
 
     #[serde(skip_serializing_if = "String::is_empty")]
     pub pointStyle: String,
@@ -388,6 +425,10 @@ pub struct XYPoint {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub description: String,
 }
+impl DatasetDataExt for Vec<XYPoint> {}
+
+pub type MinMaxPoint = [NumberOrDateString; 2];
+impl DatasetDataExt for Vec<MinMaxPoint> {}
 
 impl<T: std::fmt::Display, U: std::fmt::Display> From<(T, U)> for XYPoint {
     fn from((x, y): (T, U)) -> Self
@@ -532,6 +573,12 @@ pub struct ChartScale {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reverse: Option<bool>,
 
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub barPercentage: NumberString,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty")]
+    pub categoryPercentage: NumberString,
+
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty")]
     pub grace: NumberOrDateString,
 
@@ -540,6 +587,9 @@ pub struct ChartScale {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub grouped: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<bool>,
 
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty")]
     pub max: NumberOrDateString,
