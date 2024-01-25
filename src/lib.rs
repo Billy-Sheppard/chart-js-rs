@@ -29,7 +29,14 @@ use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
     console.debug(obj);
 
     const ctx = document.getElementById(id);
-    var chart = new Chart(ctx, obj);
+    var chart = Chart.getChart(ctx);
+    if (chart) {
+        chart.data.datasets = v.data.datasets;
+        chart.options = v.options;
+        chart.update();
+    } else {
+        new Chart(ctx, obj);
+    }
 }"#)]
 extern "C" {
     fn render_chart(v: JsValue, id: &str, mutate: bool);
