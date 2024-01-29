@@ -1,9 +1,8 @@
-use gloo_utils::format::JsValueSerdeExt;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{types::*, utils::*, ChartOptions};
+use crate::{types::*, ChartExt, ChartOptions};
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Scatter<A: Annotation> {
     #[serde(rename = "type")]
     pub r#type: ScatterString,
@@ -12,16 +11,13 @@ pub struct Scatter<A: Annotation> {
     pub id: String,
 }
 
-impl<A: Annotation> Scatter<A> {
-    pub fn to_chart(self) -> Chart {
-        Chart(
-            <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self).unwrap(),
-            self.id,
-        )
+impl<A: Annotation + DeserializeOwned> ChartExt for Scatter<A> {
+    fn get_id(self) -> String {
+        self.id
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ScatterString(String);
 impl Serialize for ScatterString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

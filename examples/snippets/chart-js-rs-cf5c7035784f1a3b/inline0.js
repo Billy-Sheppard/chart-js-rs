@@ -1,5 +1,5 @@
 export function render_chart(v, id, mutate) {
-    console.debug(v);
+    console.debug('Before mutate:', v);
 
     let obj;
     if (mutate) {
@@ -9,8 +9,8 @@ export function render_chart(v, id, mutate) {
         obj = v
     };
 
-    console.debug(obj);
+    console.debug('After mutate:', obj);
 
     const ctx = document.getElementById(id);
-    var chart = new Chart(ctx, obj);
+    let chart = new Chart(ctx, obj);
 }
