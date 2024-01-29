@@ -21,7 +21,7 @@ use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 pub trait ChartExt: DeserializeOwned + Serialize {
     fn get_id(self) -> String;
 
-    fn to_chart(self) -> Chart {
+    fn into_chart(self) -> Chart {
         Chart(
             <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
                 .expect("Unable to serialize chart."),

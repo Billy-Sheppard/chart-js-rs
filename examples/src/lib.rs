@@ -132,7 +132,7 @@ impl Model {
             .prop("id", id)
             .style("height", "calc(100vh - 270px)")
             .after_inserted(move |_| {
-                chart.to_chart().render_mutate(); // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
+                chart.into_chart().render_mutate(); // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
             })
         })
     }
@@ -205,7 +205,7 @@ impl Model {
             .prop("id", id)
             .style("height", "calc(100vh - 270px)")
             .after_inserted(move |_| {
-                chart.to_chart().render_mutate() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
+                chart.into_chart().render_mutate() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
             })
         })
     }
@@ -458,7 +458,7 @@ impl Model {
                                                         d.borderColor = "green".into();
                                                     }
                                                 }).unwrap();
-                                                chart.to_chart().update(true);
+                                                chart.into_chart().update(true);
                                                 _self.tick.set(!_self.tick.get());
                                             }
                                         })
@@ -492,7 +492,7 @@ impl Model {
                                                         d.borderColor = "green".into();
                                                     }
                                                 }).unwrap();
-                                                chart.to_chart().update(false);
+                                                chart.into_chart().update(false);
                                                 _self.tick.set(!_self.tick.get());
                                             }
                                         })
