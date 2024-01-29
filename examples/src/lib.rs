@@ -1,6 +1,6 @@
 use chart_js_rs::{
-    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, ChartOptions, ChartScale, Dataset,
-    DatasetDataExt, NoAnnotations, SinglePointDataset, XYDataset, XYPoint,
+    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, ChartExt, ChartOptions, ChartScale,
+    Dataset, DatasetDataExt, NoAnnotations, SinglePointDataset, XYDataset, XYPoint,
 };
 use dominator::{self, events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
@@ -23,6 +23,7 @@ fn random() -> Vec<usize> {
 
 #[derive(Debug, Clone)]
 pub struct Model {
+    tick: Mutable<bool>,
     chart: Mutable<&'static str>,
     x: Mutable<Rc<Vec<usize>>>,
     y1: Mutable<Rc<Vec<usize>>>,
@@ -33,6 +34,7 @@ impl Model {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
         Rc::new(Model {
+            tick: Mutable::default(),
             chart: Mutable::new("scatter"),
             x: Mutable::new(Rc::new((0..=20).collect())),
             y1: Mutable::new(Rc::new(random())),
@@ -130,7 +132,7 @@ impl Model {
             .prop("id", id)
             .style("height", "calc(100vh - 270px)")
             .after_inserted(move |_| {
-                chart.to_chart().render_mutate() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
+                chart.into_chart().render_mutate(); // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
             })
         })
     }
@@ -203,7 +205,7 @@ impl Model {
             .prop("id", id)
             .style("height", "calc(100vh - 270px)")
             .after_inserted(move |_| {
-                chart.to_chart().render_mutate() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
+                chart.into_chart().render_mutate() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
             })
         })
     }
@@ -421,6 +423,85 @@ impl Model {
                                     model.clone().chart.set("donut"); // change which chart is in view
                                 }
                             })
+                        })
+                    )
+                    .child_signal(self.chart.signal().map(|c|
+                        if c == "scatter" {
+                            Some(html!("button", {
+                                .class("button")
+                                .prop("disabled", true)
+                            }))
+                        }
+                        else {
+                            None
+                        })
+                    )
+                    .child_signal(self.chart.signal().map({
+                        let _self = self.clone();
+                        move |c|
+                            if c == "scatter" {
+                                Some(
+                                    html!("button", {
+                                        .class(["button", "is-info"])
+                                        .text("Update Chart")
+                                        .event({
+                                            let _self = _self.clone();
+                                            move |_: events::Click| {
+                                                // update scatter chart colour
+                                                let mut chart: Scatter::<NoAnnotations> = ChartExt::get_chart_from_id("scatter").expect("Unable to retrieve chart from JS.");
+                                                chart.data.datasets.get_mut(0).map(|d| {
+                                                    if _self.tick.get() {
+                                                        d.backgroundColor = "lightcoral".into();
+                                                        d.borderColor = "red".into();
+                                                    } else {
+                                                        d.backgroundColor = "palegreen".into();
+                                                        d.borderColor = "green".into();
+                                                    }
+                                                }).unwrap();
+                                                chart.into_chart().update(true);
+                                                _self.tick.set(!_self.tick.get());
+                                            }
+                                        })
+                                    })
+                                )
+                            }
+                            else {
+                                None
+                            }
+                        })
+                    )
+                    .child_signal(self.chart.signal().map({
+                        let _self = self.clone();
+                        move |c|
+                            if c == "scatter" {
+                                Some(
+                                    html!("button", {
+                                        .class(["button", "is-info"])
+                                        .text("Update Chart without animation")
+                                        .event({
+                                            let _self = _self.clone();
+                                            move |_: events::Click| {
+                                                // update scatter chart colour
+                                                let mut chart: Scatter::<NoAnnotations> = ChartExt::get_chart_from_id("scatter").expect("Unable to retrieve chart from JS.");
+                                                chart.data.datasets.get_mut(0).map(|d| {
+                                                    if _self.tick.get() {
+                                                        d.backgroundColor = "lightcoral".into();
+                                                        d.borderColor = "red".into();
+                                                    } else {
+                                                        d.backgroundColor = "palegreen".into();
+                                                        d.borderColor = "green".into();
+                                                    }
+                                                }).unwrap();
+                                                chart.into_chart().update(false);
+                                                _self.tick.set(!_self.tick.get());
+                                            }
+                                        })
+                                    })
+                                )
+                            }
+                            else {
+                                None
+                            }
                         })
                     )
                 })

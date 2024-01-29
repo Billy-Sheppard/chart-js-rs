@@ -1,6 +1,6 @@
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
-use crate::render_chart;
+use crate::{render_chart, update_chart};
 
 #[wasm_bindgen]
 pub struct Chart(pub(crate) JsValue, pub(crate) String);
@@ -14,6 +14,9 @@ impl Chart {
     }
     pub fn render_mutate(self) {
         render_chart(self.0, &self.1, true);
+    }
+    pub fn update(self, animate: bool) -> bool {
+        update_chart(self.0, &self.1, animate)
     }
 }
 

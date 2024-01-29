@@ -15,7 +15,8 @@ pub struct Pie<A: Annotation> {
 impl<A: Annotation> Pie<A> {
     pub fn to_chart(self) -> Chart {
         Chart(
-            <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self).unwrap(),
+            <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
+                .expect("Unable to serialize chart."),
             self.id,
         )
     }
