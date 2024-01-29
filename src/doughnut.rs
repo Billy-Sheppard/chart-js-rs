@@ -15,7 +15,8 @@ pub struct Doughnut<A: Annotation> {
 impl<A: Annotation> Doughnut<A> {
     pub fn to_chart(self) -> Chart {
         Chart(
-            <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self).expect("Unable to serialize chart."),
+            <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
+                .expect("Unable to serialize chart."),
             self.id,
         )
     }

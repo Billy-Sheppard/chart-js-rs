@@ -437,7 +437,7 @@ impl Model {
                         })
                     )
                     .child_signal(self.chart.signal().map({
-                        let _self = self.clone(); 
+                        let _self = self.clone();
                         move |c|
                             if c == "scatter" {
                                 Some(
@@ -471,7 +471,7 @@ impl Model {
                         })
                     )
                     .child_signal(self.chart.signal().map({
-                        let _self = self.clone(); 
+                        let _self = self.clone();
                         move |c|
                             if c == "scatter" {
                                 Some(
