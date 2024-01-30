@@ -1,6 +1,6 @@
-import { render_chart } from './snippets/chart-js-rs-cf5c7035784f1a3b/inline0.js';
-import { get_chart } from './snippets/chart-js-rs-cf5c7035784f1a3b/inline1.js';
-import { update_chart } from './snippets/chart-js-rs-cf5c7035784f1a3b/inline2.js';
+import { render_chart } from './snippets/chart-js-rs-e417185604eb4a58/inline0.js';
+import { get_chart } from './snippets/chart-js-rs-e417185604eb4a58/inline1.js';
+import { update_chart } from './snippets/chart-js-rs-e417185604eb4a58/inline2.js';
 
 let wasm;
 
@@ -12,6 +12,15 @@ function getObject(idx) { return heap[idx]; }
 
 let heap_next = heap.length;
 
+function addHeapObject(obj) {
+    if (heap_next === heap.length) heap.push(heap.length + 1);
+    const idx = heap_next;
+    heap_next = heap[idx];
+
+    heap[idx] = obj;
+    return idx;
+}
+
 function dropObject(idx) {
     if (idx < 132) return;
     heap[idx] = heap_next;
@@ -22,15 +31,6 @@ function takeObject(idx) {
     const ret = getObject(idx);
     dropObject(idx);
     return ret;
-}
-
-function addHeapObject(obj) {
-    if (heap_next === heap.length) heap.push(heap.length + 1);
-    const idx = heap_next;
-    heap_next = heap[idx];
-
-    heap[idx] = obj;
-    return idx;
 }
 
 const cachedTextDecoder = (typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8', { ignoreBOM: true, fatal: true }) : { decode: () => { throw Error('TextDecoder not available') } } );
@@ -116,114 +116,7 @@ function getInt32Memory0() {
     if (cachedInt32Memory0 === null || cachedInt32Memory0.byteLength === 0) {
         cachedInt32Memory0 = new Int32Array(wasm.memory.buffer);
     }
-    if (type == 'string') {
-        return `"${val}"`;
-    }
-    if (type == 'symbol') {
-        const description = val.description;
-        if (description == null) {
-            return 'Symbol';
-        } else {
-            return `Symbol(${description})`;
-        }
-    }
-    if (type == 'function') {
-        const name = val.name;
-        if (typeof name == 'string' && name.length > 0) {
-            return `Function(${name})`;
-        } else {
-            return 'Function';
-        }
-    }
-    // objects
-    if (Array.isArray(val)) {
-        const length = val.length;
-        let debug = '[';
-        if (length > 0) {
-            debug += debugString(val[0]);
-        }
-        for(let i = 1; i < length; i++) {
-            debug += ', ' + debugString(val[i]);
-        }
-        debug += ']';
-        return debug;
-    }
-    // Test for built-in
-    const builtInMatches = /\[object ([^\]]+)\]/.exec(toString.call(val));
-    let className;
-    if (builtInMatches.length > 1) {
-        className = builtInMatches[1];
-    } else {
-        // Failed to match the standard '[object ClassName]'
-        return toString.call(val);
-    }
-    if (className == 'Object') {
-        // we're a user defined class or Object
-        // JSON.stringify avoids problems with cycles, and is generally much
-        // easier than looping through ownProperties of `val`.
-        try {
-            return 'Object(' + JSON.stringify(val) + ')';
-        } catch (_) {
-            return 'Object';
-        }
-    }
-    // errors
-    if (val instanceof Error) {
-        return `${val.name}: ${val.message}\n${val.stack}`;
-    }
-    // TODO we could test for more things here, like `Set`s and `Map`s.
-    return className;
-}
-
-function makeMutClosure(arg0, arg1, dtor, f) {
-    const state = { a: arg0, b: arg1, cnt: 1, dtor };
-    const real = (...args) => {
-        // First up with a closure we increment the internal reference
-        // count. This ensures that the Rust closure environment won't
-        // be deallocated while we're invoking it.
-        state.cnt++;
-        const a = state.a;
-        state.a = 0;
-        try {
-            return f(a, state.b, ...args);
-        } finally {
-            if (--state.cnt === 0) {
-                wasm.__wbindgen_export_2.get(state.dtor)(a, state.b);
-
-            } else {
-                state.a = a;
-            }
-        }
-    };
-    real.original = state;
-
-    return real;
-}
-
-let stack_pointer = 128;
-
-function addBorrowedObject(obj) {
-    if (stack_pointer == 1) throw new Error('out of js stack');
-    heap[--stack_pointer] = obj;
-    return stack_pointer;
-}
-function __wbg_adapter_38(arg0, arg1, arg2) {
-    try {
-        wasm.wasm_bindgen__convert__closures__invoke1_mut_ref__hd82a582f55fea6e3(arg0, arg1, addBorrowedObject(arg2));
-    } finally {
-        heap[stack_pointer++] = undefined;
-    }
-}
-
-function __wbg_adapter_41(arg0, arg1, arg2) {
-    wasm._dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h9db33a9def9b43fe(arg0, arg1, addHeapObject(arg2));
-}
-
-/**
-* @returns {Promise<void>}
-*/
-export function main_js() {
-    wasm.main_js();
+    return cachedInt32Memory0;
 }
 
 function makeMutClosure(arg0, arg1, dtor, f) {
@@ -260,7 +153,7 @@ function addBorrowedObject(obj) {
 }
 function __wbg_adapter_26(arg0, arg1, arg2) {
     try {
-        wasm.wasm_bindgen__convert__closures__invoke1_mut_ref__h8fd9a0be7207943e(arg0, arg1, addBorrowedObject(arg2));
+        wasm.wasm_bindgen__convert__closures__invoke1_mut_ref__h547cd6f7adb53e6c(arg0, arg1, addBorrowedObject(arg2));
     } finally {
         heap[stack_pointer++] = undefined;
     }
@@ -362,10 +255,6 @@ function __wbg_get_imports() {
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
         takeObject(arg0);
     };
-    imports.wbg.__wbindgen_object_clone_ref = function(arg0) {
-        const ret = getObject(arg0);
-        return addHeapObject(ret);
-    };
     imports.wbg.__wbindgen_cb_drop = function(arg0) {
         const obj = takeObject(arg0).original;
         if (obj.cnt-- == 1) {
@@ -455,14 +344,14 @@ function __wbg_get_imports() {
         const ret = getObject(arg0).queueMicrotask;
         return addHeapObject(ret);
     };
-    imports.wbg.__wbg_renderchart_1c0aa68bc7206b47 = function(arg0, arg1, arg2, arg3) {
+    imports.wbg.__wbg_renderchart_6e5c100f63a67f55 = function(arg0, arg1, arg2, arg3) {
         render_chart(takeObject(arg0), getStringFromWasm0(arg1, arg2), arg3 !== 0);
     };
-    imports.wbg.__wbg_updatechart_dd126d7188932a41 = function(arg0, arg1, arg2, arg3) {
+    imports.wbg.__wbg_updatechart_8b3a02703f88b542 = function(arg0, arg1, arg2, arg3) {
         const ret = update_chart(takeObject(arg0), getStringFromWasm0(arg1, arg2), arg3 !== 0);
         return ret;
     };
-    imports.wbg.__wbg_getchart_98327febef1336fa = function(arg0, arg1) {
+    imports.wbg.__wbg_getchart_0f0cceeeb23b217b = function(arg0, arg1) {
         const ret = get_chart(getStringFromWasm0(arg0, arg1));
         return addHeapObject(ret);
     };
@@ -653,11 +542,11 @@ function __wbg_get_imports() {
         const ret = wasm.memory;
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper508 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 117, __wbg_adapter_26);
+    imports.wbg.__wbindgen_closure_wrapper443 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 99, __wbg_adapter_26);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper624 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper625 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 159, __wbg_adapter_29);
         return addHeapObject(ret);
     };
