@@ -253,7 +253,7 @@ impl Model {
             .prop("id", id)
             .style("height", "calc(100vh - 270px)")
             .after_inserted(move |_| {
-                chart.to_chart().render() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
+                chart.into_chart().render() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
             })
         })
     }
@@ -333,7 +333,7 @@ impl Model {
                         .prop("id", three_id)
                         .style("height", "calc(100vh - 270px)")
                         .after_inserted(move |_| {
-                            three_a_chart.to_chart().render()
+                            three_a_chart.into_chart().render()
                         })
                     }))
                 }),
@@ -344,7 +344,7 @@ impl Model {
                         .prop("id", four_id)
                         .style("height", "calc(100vh - 270px)")
                         .after_inserted(move |_| {
-                            three_b_chart.to_chart().render()
+                            three_b_chart.into_chart().render()
                         })
                     }))
                 })

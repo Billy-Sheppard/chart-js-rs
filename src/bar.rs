@@ -1,9 +1,8 @@
-use gloo_utils::format::JsValueSerdeExt;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{types::*, utils::*, ChartOptions};
+use crate::{types::*, ChartExt, ChartOptions};
 
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Bar<A: Annotation> {
     #[serde(rename = "type")]
     pub r#type: BarString,
@@ -12,16 +11,13 @@ pub struct Bar<A: Annotation> {
     pub id: String,
 }
 
-impl<A: Annotation> Bar<A> {
-    pub fn to_chart(self) -> Chart {
-        Chart(
-            <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
-                .expect("Unable to serialize chart."),
-            self.id,
-        )
+impl<A: Annotation + DeserializeOwned> ChartExt for Bar<A> {
+    fn get_id(self) -> String {
+        self.id
     }
 }
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct BarString(String);
 impl Serialize for BarString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
