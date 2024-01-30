@@ -1,6 +1,7 @@
 use chart_js_rs::{
-    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, ChartExt, ChartOptions, ChartScale,
-    Dataset, DatasetDataExt, NoAnnotations, SinglePointDataset, XYDataset, XYPoint,
+    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, utils::utils::FnWithArgs, ChartExt,
+    ChartOptions, ChartScale, Dataset, DatasetDataExt, NoAnnotations, SinglePointDataset,
+    XYDataset, XYPoint,
 };
 use dominator::{self, events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
@@ -349,6 +350,72 @@ impl Model {
                     }))
                 })
             ])
+        })
+    }
+
+    fn show_chart_four(self: Rc<Self>, data: Vec<(usize, usize)>) -> Dom {
+        // construct and render chart here
+        let id = "chart_four";
+
+        let chart = Scatter::<NoAnnotations> {
+            // we use <NoAnnotations> here to type hint for the compiler
+            data: Dataset {
+                labels: Some(
+                    // use a range to give us our X axis labels
+                    (0..data.len()).map(|d| (d + 1).into()).collect(),
+                ),
+                datasets: Vec::from([XYDataset {
+                    r#type: "line".to_string(),
+                    spanGaps: true.into(),
+                    segment: Segment {
+                        borderDash: FnWithArgs::new().arg("ctx").body("ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined"),
+                        borderColor: FnWithArgs::new().arg("ctx").body("ctx.p0.skip || ctx.p1.skip ? 'rgb(0, 0, 0, 0.2)' : (ctx.p0.parsed.y > ctx.p1.parsed.y) ? 'rgb(255,0,0,1)' : 'rgb(0,255,0,1)'"),
+                    }
+                    .into(),
+                    data: data
+                        .iter()
+                        .enumerate()
+                        .map(|(x, d)| {
+                            if x % 5 == 0 {
+                                return XYPoint::NaN();
+                            }
+
+                            XYPoint {
+                                // iterate over our data to construct a dataset
+                                x: (x + 1).into(), // use enumerate to give us our X axis point
+                                y: d.1.into(),
+                                ..Default::default() // always use `..Default::default()` to make sure this works in the future
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .to_dataset_data(), // collect into a Vec<XYPoint>
+
+                    backgroundColor: "palegreen".into(),
+                    borderColor: "green".into(),
+                    borderWidth: 2.into(),
+                    label: "Dataset 1".into(),
+                    yAxisID: "y".into(),
+                    ..Default::default() // always use `..Default::default()` to make sure this works in the future
+                }]),
+            },
+            options: ChartOptions {
+                maintainAspectRatio: Some(false),
+                interaction: Some(ChartInteraction {
+                    intersect: Some(false),
+                    mode: "nearest".into(),
+                    axis: "xy".into(),
+                }),
+                ..Default::default() // always use `..Default::default()` to make sure this works in the future
+            },
+            id: id.into(),
+            ..Default::default()
+        };
+        html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
+            .prop("id", id)
+            .style("height", "calc(100vh - 270px)")
+            .after_inserted(move |_| {
+                chart.to_chart().render() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see chart_two and index.html
+            })
         })
     }
 
