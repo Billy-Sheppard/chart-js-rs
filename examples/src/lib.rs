@@ -1,7 +1,7 @@
 use chart_js_rs::{
     bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, utils::FnWithArgs, ChartExt,
-    ChartInteraction, ChartOptions, ChartScale, Dataset, DatasetDataExt, NoAnnotations, Segment,
-    SinglePointDataset, XYDataset, XYPoint,
+    ChartOptions, ChartScale, Dataset, DatasetDataExt, NoAnnotations, Segment, SinglePointDataset,
+    XYDataset, XYPoint,
 };
 use dominator::{self, events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
@@ -159,7 +159,7 @@ impl Model {
                             .map(|(x, d)| {
                                 if x % 5 == 0 { return XYPoint::NaN() }
                                 d
-                            })  
+                            })
                         .collect::<Vec<_>>()
                         .to_dataset_data(), // collect into a Vec<XYPoint>
                         spanGaps: true.into(),

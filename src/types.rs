@@ -1,7 +1,9 @@
 use std::fmt::Debug;
 
 use {
-    crate::utils::FnWithArgs, serde::{Deserialize, Serialize}, std::{collections::HashMap, fmt::Display, option::Option}
+    crate::utils::FnWithArgs,
+    serde::{Deserialize, Serialize},
+    std::{collections::HashMap, fmt::Display, option::Option},
 };
 
 pub trait DatasetTrait: Serialize {}
@@ -1021,4 +1023,3 @@ pub struct Segment {
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
     pub borderColor: FnWithArgs,
 }
-
