@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use {
+    crate::utils::FnWithArgs,
     serde::{Deserialize, Serialize},
     std::{collections::HashMap, fmt::Display, option::Option},
 };
@@ -450,6 +451,12 @@ pub struct XYDataset {
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub z: NumberString,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub segment: Option<Segment>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spanGaps: Option<bool>,
 }
 impl DatasetTrait for Vec<XYDataset> {}
 
@@ -464,6 +471,16 @@ pub struct XYPoint {
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub description: String,
 }
+impl XYPoint {
+    pub fn NaN() -> Self {
+        Self {
+            x: NumberOrDateString::from("NaN"),
+            y: NumberString::from("NaN"),
+            ..Default::default()
+        }
+    }
+}
+
 impl DatasetDataExt for Vec<XYPoint> {}
 
 pub type MinMaxPoint = [NumberOrDateString; 2];
@@ -997,4 +1014,12 @@ pub struct Font {
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub lineHeight: NumberString,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Segment {
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
+    pub borderDash: FnWithArgs,
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
+    pub borderColor: FnWithArgs,
 }

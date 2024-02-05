@@ -1,6 +1,7 @@
 use chart_js_rs::{
-    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, ChartExt, ChartOptions, ChartScale,
-    Dataset, DatasetDataExt, NoAnnotations, SinglePointDataset, XYDataset, XYPoint,
+    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, utils::FnWithArgs, ChartExt,
+    ChartOptions, ChartScale, Dataset, DatasetDataExt, NoAnnotations, Segment, SinglePointDataset,
+    XYDataset, XYPoint,
 };
 use dominator::{self, events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
@@ -154,11 +155,19 @@ impl Model {
                                 y: y.into(),
                                 ..Default::default() // always use `..Default::default()` to make sure this works in the future
                             })
-                            .collect::<Vec<_>>()
-                            .to_dataset_data(), // collect into a Vec<XYPoint>
-
-                        borderColor: "red".into(),
-                        backgroundColor: "lightcoral".into(),
+                            .enumerate()
+                            .map(|(x, d)| {
+                                if x % 5 == 0 { return XYPoint::NaN() }
+                                d
+                            })
+                        .collect::<Vec<_>>()
+                        .to_dataset_data(), // collect into a Vec<XYPoint>
+                        spanGaps: true.into(),
+                        segment: Segment {
+                            borderDash: FnWithArgs::new().arg("ctx").body("ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined"),
+                            borderColor: FnWithArgs::new().arg("ctx").body("ctx.p0.skip || ctx.p1.skip ? 'rgb(0, 0, 0, 0.2)' : (ctx.p0.parsed.y > ctx.p1.parsed.y) ? 'rgb(255,0,0,1)' : 'rgb(0,255,0,1)'"),
+                        }
+                        .into(),
                         pointRadius: 4.into(),
                         label: "Dataset 1".into(),
                         r#type: "line".into(),
