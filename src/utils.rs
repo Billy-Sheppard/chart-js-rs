@@ -7,6 +7,8 @@ use crate::{render_chart, update_chart};
 #[wasm_bindgen]
 pub struct Chart(pub(crate) JsValue, pub(crate) String);
 
+/// Walks the JsValue object to get the value of a nested property
+/// using the JS dot notation
 fn get_path(j: &JsValue, item: &str) -> Option<JsValue> {
     let mut path = item.split(".");
     let item = &path.next().unwrap().to_string().into();
@@ -40,6 +42,8 @@ impl Chart {
         update_chart(self.0, &self.1, animate)
     }
 
+    /// Converts the string-serialized segment functions to a JavaScript function
+    /// then updates the chart options in the Js representation opf the chart
     pub fn correct(&self) {
         Array::from(&get_path(&self.0, "data.datasets").unwrap())
             .iter()

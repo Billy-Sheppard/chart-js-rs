@@ -1016,9 +1016,9 @@ pub struct Font {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Segment {
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty")]
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
     pub borderDash: FnWithArgs,
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty")]
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
     pub borderColor: FnWithArgs,
 }
 
