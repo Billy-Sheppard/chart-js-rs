@@ -55,6 +55,7 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
 ...
 
 <script>
+  // mutating charts
   function mutate_chart_object(v) { // must have this function name
     if (v.id === ("[YOUR CHART ID HERE]")) {
     // do any work here, this would prepend `$` to y1 axis tick labels
@@ -70,3 +71,16 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
   }
 </script>
 ```
+
+<hr>
+
+# Explainers
+
+## Whats the difference between `my_chart.render()` and `mychart.render_mutate()`?
+`.render()` is for simple charts, that don't require any further changes done using javascript code.
+
+`.render_mutate()` allows for chart objects to be accessible in your javascript file, so you can mutate the object however required, especially useful for ChartJS functions not yet available in this library.
+
+## How to use `struct FnWithArgs`?
+
+`todo!(by_tascord)`
