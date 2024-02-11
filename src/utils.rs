@@ -10,9 +10,9 @@ pub struct Chart(pub(crate) JsValue, pub(crate) String);
 /// Walks the JsValue object to get the value of a nested property
 /// using the JS dot notation
 fn get_path(j: &JsValue, item: &str) -> Option<JsValue> {
-    let mut path = item.split(".");
+    let mut path = item.split('.');
     let item = &path.next().unwrap().to_string().into();
-    let k = Reflect::get(&j, item);
+    let k = Reflect::get(j, item);
 
     if k.is_err() {
         return None;
@@ -31,11 +31,11 @@ impl Chart {
         v.is_object().then_some(Self(v, id))
     }
     pub fn render(self) {
-        self.correct();
+        self.rationalise_js();
         render_chart(self.0, &self.1, false);
     }
     pub fn render_mutate(self) {
-        self.correct();
+        self.rationalise_js();
         render_chart(self.0, &self.1, true);
     }
     pub fn update(self, animate: bool) -> bool {
@@ -44,20 +44,20 @@ impl Chart {
 
     /// Converts the string-serialized segment functions to a JavaScript function
     /// then updates the chart options in the Js representation opf the chart
-    pub fn correct(&self) {
+    pub fn rationalise_js(&self) {
         Array::from(&get_path(&self.0, "data.datasets").unwrap())
             .iter()
             .for_each(|dataset| {
                 let segment = Reflect::get(&dataset, &"segment".into());
-                if !segment.is_err() {
+                if segment.is_ok() {
                     let segment = segment.unwrap();
 
                     let dash = Reflect::get(&segment, &"borderDash".into());
-                    if dash.is_ok() {
+                    if let Ok(dash) = dash {
                         Reflect::set(
                             &segment,
                             &"borderDash".into(),
-                            &serde_wasm_bindgen::from_value::<FnWithArgs>(dash.unwrap())
+                            &serde_wasm_bindgen::from_value::<FnWithArgs>(dash)
                                 .unwrap()
                                 .build(),
                         )
@@ -65,11 +65,11 @@ impl Chart {
                     }
 
                     let color = Reflect::get(&segment, &"borderColor".into());
-                    if color.is_ok() {
+                    if let Ok(color) = color {
                         Reflect::set(
                             &segment,
                             &"borderColor".into(),
-                            &serde_wasm_bindgen::from_value::<FnWithArgs>(color.unwrap())
+                            &serde_wasm_bindgen::from_value::<FnWithArgs>(color)
                                 .unwrap()
                                 .build(),
                         )
@@ -108,8 +108,4 @@ impl FnWithArgs {
     pub fn build(&self) -> Function {
         Function::new_with_args(&self.args.join(", "), &format!("return {}", self.body))
     }
-}
-
-pub fn some_false() -> Option<bool> {
-    Some(false)
 }
