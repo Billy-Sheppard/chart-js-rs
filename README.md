@@ -96,7 +96,7 @@ It is important then, that you know which variables are being parsed to the func
           segment: Segment {
             borderColor: 
               FnWithArgs::new() // Create the Function
-                .arg("ctx") // Add a named arguement using a builder pattern
+                .arg("ctx") // Add a named argument using a builder pattern
                 .body("ctx.p0.parsed.y > ctx.p1.parsed.y ? 'red' : 'green'") // Add the function body, in this case make the line red if the slope is negative
           }
         }
