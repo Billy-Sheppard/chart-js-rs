@@ -54,6 +54,9 @@ impl Chart {
 
                     let dash = Reflect::get(&segment, &"borderDash".into());
                     if let Ok(dash) = dash {
+                        if dash == JsValue::UNDEFINED {
+                            return;
+                        }
                         Reflect::set(
                             &segment,
                             &"borderDash".into(),
@@ -66,6 +69,9 @@ impl Chart {
 
                     let color = Reflect::get(&segment, &"borderColor".into());
                     if let Ok(color) = color {
+                        if color == JsValue::UNDEFINED {
+                            return;
+                        }
                         Reflect::set(
                             &segment,
                             &"borderColor".into(),
