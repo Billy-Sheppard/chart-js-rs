@@ -115,6 +115,12 @@ impl<'de> Deserialize<'de> for NumberOrDateString {
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BoolString(String);
 impl BoolString {
+    pub fn true_() -> Option<BoolString> {
+        BoolString("true".into()).into()
+    }
+    pub fn false_() -> Option<BoolString> {
+        BoolString("false".into()).into()
+    }
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -334,8 +340,8 @@ pub struct XYDataset {
     #[serde(skip_serializing_if = "DatasetData::is_empty", default)]
     pub data: DatasetData,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub datalabels: Option<DataLabels>,
+    /// Use Default::default() if this isn't required
+    pub datalabels: DataLabels,
 
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub description: String,
@@ -973,7 +979,7 @@ pub struct DataLabels {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clip: Option<bool>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "BoolString::false_")]
     pub display: Option<BoolString>,
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
