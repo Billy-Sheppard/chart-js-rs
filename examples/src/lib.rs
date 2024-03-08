@@ -7,7 +7,7 @@ use dominator::{self, events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
 use rand::Rng;
 use std::{
-    collections::HashMap,
+    collections::{BTreeSet, HashMap},
     pin::Pin,
     rc::Rc,
     task::{Context, Poll},
@@ -91,8 +91,8 @@ impl Model {
                                 y: d.1.into(),
                                 ..Default::default() // always use `..Default::default()` to make sure this works in the future
                             })
-                            .collect::<Vec<_>>()
-                            .to_dataset_data(), // collect into a Vec<XYPoint>
+                            .collect::<BTreeSet<_>>()
+                            .to_dataset_data(), // collect into a BTreeSet<XYPoint>
 
                         borderColor: "red".into(),
                         backgroundColor: "lightcoral".into(),
@@ -110,8 +110,8 @@ impl Model {
                                 y: d.1.into(),
                                 ..Default::default() // always use `..Default::default()` to make sure this works in the future
                             })
-                            .collect::<Vec<_>>()
-                            .to_dataset_data(), // collect into a Vec<XYPoint>
+                            .collect::<BTreeSet<_>>()
+                            .to_dataset_data(), // collect into a BTreeSet<XYPoint>
 
                         borderColor: "blue".into(),
                         backgroundColor: "lightskyblue".into(),
@@ -160,8 +160,8 @@ impl Model {
                                 if x % 5 == 0 { return XYPoint::NaN() }
                                 d
                             })
-                        .collect::<Vec<_>>()
-                        .to_dataset_data(), // collect into a Vec<XYPoint>
+                        .collect::<BTreeSet<_>>()
+                        .to_dataset_data(), // collect into a BTreeSet<XYPoint>
                         spanGaps: true.into(),
                         segment: Segment {
                             borderDash: FnWithArgs::new().arg("ctx").body("ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined"),
@@ -183,8 +183,8 @@ impl Model {
                                 y: y.into(),
                                 ..Default::default() // always use `..Default::default()` to make sure this works in the future
                             })
-                            .collect::<Vec<_>>()
-                            .to_dataset_data(), // collect into a Vec<XYPoint>
+                            .collect::<BTreeSet<_>>()
+                            .to_dataset_data(), // collect into a BTreeSet<XYPoint>
 
                         borderColor: "blue".into(),
                         backgroundColor: "lightskyblue".into(),
@@ -240,8 +240,8 @@ impl Model {
                             y: y.into(),
                             ..Default::default() // always use `..Default::default()` to make sure this works in the future
                         })
-                        .collect::<Vec<_>>()
-                        .to_dataset_data(), // collect into a Vec<XYPoint>
+                        .collect::<BTreeSet<_>>()
+                        .to_dataset_data(), // collect into a BTreeSet<XYPoint>
 
                     backgroundColor: "palegreen".into(),
                     borderColor: "green".into(),

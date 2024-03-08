@@ -1,9 +1,9 @@
-use std::fmt::Debug;
+use std::{collections::BTreeSet, fmt::Debug};
 
 use {
     crate::utils::FnWithArgs,
     serde::{Deserialize, Serialize},
-    std::{collections::HashMap, fmt::Display, option::Option},
+    std::{collections::HashMap, fmt::Display},
 };
 
 pub trait DatasetTrait: Serialize {}
@@ -487,10 +487,10 @@ impl XYPoint {
     }
 }
 
-impl DatasetDataExt for Vec<XYPoint> {}
+impl DatasetDataExt for BTreeSet<XYPoint> {}
 
 pub type MinMaxPoint = [NumberOrDateString; 2];
-impl DatasetDataExt for Vec<MinMaxPoint> {}
+impl DatasetDataExt for BTreeSet<MinMaxPoint> {}
 
 impl<T: std::fmt::Display, U: std::fmt::Display> From<(T, U)> for XYPoint {
     fn from((x, y): (T, U)) -> Self
@@ -567,6 +567,9 @@ pub struct ChartPlugins<A: Annotation> {
 pub struct PluginLegend {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
+
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub position: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub labels: Option<LegendLabel>,
@@ -695,8 +698,8 @@ pub struct ScaleBorder {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub width: NumberString,
 
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub dash: NumberString,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub dash: Vec<NumberString>,
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub dashOffset: NumberString,
@@ -712,6 +715,15 @@ pub struct Grid {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub drawOnChartArea: Option<bool>,
+
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub color: String,
+
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub tickColor: String,
+
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub z: NumberString,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -831,6 +843,9 @@ pub struct ScaleTicks {
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub precision: NumberString,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub padding: Option<Padding>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
