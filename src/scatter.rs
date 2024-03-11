@@ -1,6 +1,9 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{
+    de::{self, DeserializeOwned},
+    Deserialize, Serialize,
+};
 
-use crate::{types::*, ChartExt, ChartOptions};
+use crate::{types::*, ChartExt};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Scatter<A: Annotation> {
@@ -17,18 +20,27 @@ impl<A: Annotation + DeserializeOwned> ChartExt for Scatter<A> {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct ScatterString(String);
+#[derive(Debug, Default, Clone)]
+
+pub struct ScatterString;
+impl<'de> Deserialize<'de> for ScatterString {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        match String::deserialize(deserializer)?.to_lowercase().as_str() {
+            "scatter" => Ok(ScatterString),
+            other => Err(de::Error::custom(format!(
+                "`{other}` is not a valid ScatterString."
+            ))),
+        }
+    }
+}
 impl Serialize for ScatterString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         serializer.serialize_str("scatter")
-    }
-}
-impl Default for ScatterString {
-    fn default() -> Self {
-        Self("scatter".into())
     }
 }
