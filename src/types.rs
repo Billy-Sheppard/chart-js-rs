@@ -825,6 +825,9 @@ pub struct ScaleTicks {
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub precision: NumberString,
+
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
+    pub callback: FnWithArgs
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]

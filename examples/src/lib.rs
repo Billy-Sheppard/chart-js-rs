@@ -1,7 +1,7 @@
 use chart_js_rs::{
     bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, utils::FnWithArgs, ChartExt,
-    ChartOptions, ChartScale, Dataset, DatasetDataExt, NoAnnotations, Segment, SinglePointDataset,
-    XYDataset, XYPoint,
+    ChartOptions, ChartScale, Dataset, DatasetDataExt, NoAnnotations, ScaleTicks, Segment,
+    SinglePointDataset, XYDataset, XYPoint,
 };
 use dominator::{self, events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
@@ -201,6 +201,10 @@ impl Model {
                     "x".into(),
                     ChartScale {
                         r#type: "linear".into(),
+                        ticks: ScaleTicks {
+                            callback: FnWithArgs::new().arg("value").arg("index").body("index % 2 === 0 ? this.getLabelForValue(value) : ''"),
+                            ..Default::default()
+                        }.into(),
                         ..Default::default()
                     },
                 )])),
