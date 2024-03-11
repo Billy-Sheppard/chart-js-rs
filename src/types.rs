@@ -846,7 +846,7 @@ pub struct ScaleTicks {
 
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
     pub callback: FnWithArgs,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub padding: Option<Padding>,
 }
