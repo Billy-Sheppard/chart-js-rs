@@ -1,8 +1,34 @@
-use js_sys::{Array, Function, Reflect};
+use js_sys::{Array, Function, Object, Reflect};
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
+use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 
 use crate::{render_chart, update_chart};
+
+/// Macro to make it easier to rationalize the chart options
+///
+/// Pass the owning object, and the path to the FnWithArgs
+macro_rules! rationalize {
+    ($set:ident, $name:expr) => {
+        let s = $name.split('.').collect::<Vec<&str>>();
+        if let Ok(a) = Reflect::get(&$set, &s[0].into()) {
+            // If the property is undefined, dont try serialize it
+            if a == JsValue::UNDEFINED {
+                return;
+            }
+
+            if let Ok(b) = Reflect::get(&a, &s[1].into()) {
+                Reflect::set(
+                    &a,
+                    &s[1].into(),
+                    &serde_wasm_bindgen::from_value::<FnWithArgs>(b)
+                        .unwrap()
+                        .build(),
+                )
+                .unwrap();
+            }
+        }
+    };
+}
 
 #[wasm_bindgen]
 pub struct Chart(pub(crate) JsValue, pub(crate) String);
@@ -26,6 +52,19 @@ fn get_path(j: &JsValue, item: &str) -> Option<JsValue> {
     Some(k)
 }
 
+/// Get values of an object as an array at the given path.
+/// See get_path()
+fn object_values_at(j: &JsValue, item: &str) -> Option<Array> {
+    let o = get_path(j, item);
+    o.and_then(|o| {
+        if o == JsValue::UNDEFINED {
+            return None;
+        } else {
+            return Some(Object::values(&o.dyn_into().unwrap()));
+        }
+    })
+}
+
 impl Chart {
     pub fn new(v: JsValue, id: String) -> Option<Self> {
         v.is_object().then_some(Self(v, id))
@@ -42,47 +81,23 @@ impl Chart {
         update_chart(self.0, &self.1, animate)
     }
 
-    /// Converts the string-serialized segment functions to a JavaScript function
-    /// then updates the chart options in the Js representation opf the chart
+    /// Converts serialized FnWithArgs to JS Function's
+    /// For new chart options, this will need to be updated
     pub fn rationalise_js(&self) {
+        // Handle data.datasets
         Array::from(&get_path(&self.0, "data.datasets").unwrap())
             .iter()
             .for_each(|dataset| {
-                let segment = Reflect::get(&dataset, &"segment".into());
-                if segment.is_ok() {
-                    let segment = segment.unwrap();
-
-                    let dash = Reflect::get(&segment, &"borderDash".into());
-                    if let Ok(dash) = dash {
-                        if dash == JsValue::UNDEFINED {
-                            return;
-                        }
-                        Reflect::set(
-                            &segment,
-                            &"borderDash".into(),
-                            &serde_wasm_bindgen::from_value::<FnWithArgs>(dash)
-                                .unwrap()
-                                .build(),
-                        )
-                        .unwrap();
-                    }
-
-                    let color = Reflect::get(&segment, &"borderColor".into());
-                    if let Ok(color) = color {
-                        if color == JsValue::UNDEFINED {
-                            return;
-                        }
-                        Reflect::set(
-                            &segment,
-                            &"borderColor".into(),
-                            &serde_wasm_bindgen::from_value::<FnWithArgs>(color)
-                                .unwrap()
-                                .build(),
-                        )
-                        .unwrap();
-                    }
-                }
+                rationalize!(dataset, "segment.borderDash");
+                rationalize!(dataset, "segment.borderColor");
             });
+
+        // Handle data.options.scales
+        object_values_at(&self.0, "options.scales").map(|scales| {
+            scales.iter().for_each(|scale| {
+                rationalize!(scale, "ticks.callback");
+            });
+        });
     }
 }
 
