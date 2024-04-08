@@ -534,6 +534,7 @@ impl DatasetDataExt for BTreeSet<XYPoint> {}
 
 pub type MinMaxPoint = [NumberOrDateString; 2];
 impl DatasetDataExt for BTreeSet<MinMaxPoint> {}
+
 impl<K, V> DatasetDataExt for BTreeMap<K, V>
 where
     K: Display + Serialize,
@@ -892,6 +893,9 @@ pub struct ScaleTicks {
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub precision: NumberString,
+
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
+    pub callback: FnWithArgs,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub padding: Option<Padding>,
