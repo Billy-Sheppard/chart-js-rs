@@ -1,4 +1,7 @@
-use std::{collections::BTreeSet, fmt::Debug};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Debug,
+};
 
 use {
     crate::utils::FnWithArgs,
@@ -59,16 +62,16 @@ enum StringOrInt {
     Int(isize),
     Vec(Vec<()>),
 }
-impl ToString for StringOrInt {
-    fn to_string(&self) -> String {
+impl Display for StringOrInt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StringOrInt::String(s) => s.to_string(),
-            StringOrInt::Int(i) => format!("{i}"),
-            StringOrInt::Vec(_) => Default::default(),
+            StringOrInt::String(s) => write!(f, "{s}"),
+            StringOrInt::Int(i) => write!(f, "{i}"),
+            StringOrInt::Vec(_) => write!(f, ""),
         }
     }
 }
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct NumberOrDateString(String);
 impl From<NumberString> for NumberOrDateString {
     fn from(value: NumberString) -> Self {
@@ -80,11 +83,31 @@ impl NumberOrDateString {
         self.0.is_empty()
     }
 }
+impl PartialOrd for NumberOrDateString {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for NumberOrDateString {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if let Some((s, o)) = self
+            .0
+            .parse::<rust_decimal::Decimal>()
+            .ok()
+            .zip(other.0.parse::<rust_decimal::Decimal>().ok())
+        {
+            s.cmp(&o)
+        } else {
+            self.0.cmp(&other.0)
+        }
+    }
+}
 impl<T: Display> From<T> for NumberOrDateString {
     fn from(s: T) -> Self {
         Self(s.to_string())
     }
 }
+#[allow(unknown_lints, clippy::to_string_trait_impl)]
 impl ToString for NumberOrDateString {
     fn to_string(&self) -> String {
         self.0.to_string()
@@ -153,7 +176,7 @@ impl<'de> Deserialize<'de> for BoolString {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct NumberString(String);
 impl From<NumberOrDateString> for NumberString {
     fn from(value: NumberOrDateString) -> Self {
@@ -165,11 +188,31 @@ impl NumberString {
         self.0.is_empty()
     }
 }
+impl PartialOrd for NumberString {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for NumberString {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if let Some((s, o)) = self
+            .0
+            .parse::<rust_decimal::Decimal>()
+            .ok()
+            .zip(other.0.parse::<rust_decimal::Decimal>().ok())
+        {
+            s.cmp(&o)
+        } else {
+            self.0.cmp(&other.0)
+        }
+    }
+}
 impl<T: Display> From<T> for NumberString {
     fn from(s: T) -> Self {
         Self(s.to_string())
     }
 }
+#[allow(unknown_lints, clippy::to_string_trait_impl)]
 impl ToString for NumberString {
     fn to_string(&self) -> String {
         self.0.to_string()
@@ -491,6 +534,13 @@ impl DatasetDataExt for BTreeSet<XYPoint> {}
 
 pub type MinMaxPoint = [NumberOrDateString; 2];
 impl DatasetDataExt for BTreeSet<MinMaxPoint> {}
+
+impl<K, V> DatasetDataExt for BTreeMap<K, V>
+where
+    K: Display + Serialize,
+    V: Display + Serialize,
+{
+}
 
 impl<T: std::fmt::Display, U: std::fmt::Display> From<(T, U)> for XYPoint {
     fn from((x, y): (T, U)) -> Self
