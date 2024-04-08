@@ -58,9 +58,9 @@ fn object_values_at(j: &JsValue, item: &str) -> Option<Array> {
     let o = get_path(j, item);
     o.and_then(|o| {
         if o == JsValue::UNDEFINED {
-            return None;
+            None
         } else {
-            return Some(Object::values(&o.dyn_into().unwrap()));
+            Some(Object::values(&o.dyn_into().unwrap()))
         }
     })
 }
@@ -93,11 +93,11 @@ impl Chart {
             });
 
         // Handle data.options.scales
-        object_values_at(&self.0, "options.scales").map(|scales| {
+        if let Some(scales) = object_values_at(&self.0, "options.scales") {
             scales.iter().for_each(|scale| {
                 rationalize!(scale, "ticks.callback");
             });
-        });
+        }
     }
 }
 
