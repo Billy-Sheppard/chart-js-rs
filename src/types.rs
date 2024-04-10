@@ -1,26 +1,12 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt::Debug,
-};
-
 use {
-    crate::utils::FnWithArgs,
+    crate::{traits::*, utils::FnWithArgs},
     serde::{Deserialize, Serialize},
-    std::{collections::HashMap, fmt::Display},
+    std::{collections::HashMap, fmt::Debug, fmt::Display},
 };
 
-pub trait DatasetTrait: Serialize {}
-pub trait DatasetDataExt: Serialize {
-    fn to_dataset_data(self) -> DatasetData
-    where
-        Self: Sized + Serialize,
-    {
-        DatasetData(serde_json::to_value(self).unwrap())
-    }
-}
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 #[serde(transparent)]
-pub struct DatasetData(serde_json::Value);
+pub struct DatasetData(pub(crate) serde_json::Value);
 impl DatasetData {
     fn is_empty(&self) -> bool {
         serde_json::to_value(self)
@@ -40,8 +26,6 @@ impl Ord for DatasetData {
         self.0.to_string().cmp(&other.0.to_string())
     }
 }
-
-pub trait Annotation: Serialize {}
 
 #[derive(Debug, Deserialize, Serialize, Default)]
 pub struct NoDatasets {}
@@ -509,8 +493,8 @@ pub struct XYDataset {
 }
 impl DatasetTrait for Vec<XYDataset> {}
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct XYPoint {
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+pub(crate) struct XYPoint {
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
     pub x: NumberOrDateString,
 
@@ -520,38 +504,25 @@ pub struct XYPoint {
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub description: String,
 }
-impl XYPoint {
-    pub fn NaN() -> Self {
-        Self {
-            x: NumberOrDateString::from("NaN"),
-            y: NumberString::from("NaN"),
-            ..Default::default()
-        }
+impl PartialOrd for XYPoint {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for XYPoint {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.x.cmp(&other.x)
     }
 }
 
-impl DatasetDataExt for BTreeSet<XYPoint> {}
-
 pub type MinMaxPoint = [NumberOrDateString; 2];
-impl DatasetDataExt for BTreeSet<MinMaxPoint> {}
 
-impl<K, V> DatasetDataExt for BTreeMap<K, V>
-where
-    K: Display + Serialize,
-    V: Display + Serialize,
-{
-}
-
-impl<T: std::fmt::Display, U: std::fmt::Display> From<(T, U)> for XYPoint {
-    fn from((x, y): (T, U)) -> Self
-    where
-        T: Into<NumberOrDateString>,
-        U: Into<NumberString>,
-    {
+impl From<(NumberOrDateString, NumberString, Option<String>)> for XYPoint {
+    fn from((x, y, d): (NumberOrDateString, NumberString, Option<String>)) -> Self {
         XYPoint {
-            x: x.into(),
-            y: y.into(),
-            ..Default::default()
+            x,
+            y,
+            description: d.unwrap_or_default(),
         }
     }
 }

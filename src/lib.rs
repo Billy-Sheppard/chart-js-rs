@@ -6,6 +6,7 @@ pub mod doughnut;
 pub mod functions;
 pub mod pie;
 pub mod scatter;
+pub mod traits;
 pub mod types;
 
 #[doc(hidden)]
@@ -14,6 +15,7 @@ pub mod utils;
 use gloo_utils::format::JsValueSerdeExt;
 use serde::{de::DeserializeOwned, Serialize};
 pub use types::*;
+pub use traits::*;
 
 use utils::Chart;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};

@@ -19,3 +19,4 @@ console_error_panic_hook = { version = "0.1.7", default-features = false }
 rand = "0.8.5"
 getrandom = { version = "0.2.7", features = ["js"] }
 chart-js-rs = { path = "../" }
+itertools = "*"

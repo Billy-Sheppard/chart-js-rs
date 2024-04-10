@@ -1,13 +1,13 @@
 use chart_js_rs::{
     bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, utils::FnWithArgs, ChartExt,
-    ChartOptions, ChartScale, Dataset, DatasetDataExt, NoAnnotations, ScaleTicks, Segment,
-    SinglePointDataset, XYDataset, XYPoint,
+    ChartOptions, ChartScale, Dataset, DatasetDataExt, DatasetIterExt, NoAnnotations, ScaleTicks,
+    Segment, SinglePointDataset, XYDataset,
 };
 use dominator::{events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
 use rand::Rng;
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::HashMap,
     pin::Pin,
     rc::Rc,
     task::{Context, Poll},
@@ -82,18 +82,7 @@ impl Model {
             data: Dataset {
                 datasets: Vec::from([
                     XYDataset {
-                        data: x
-                            .iter()
-                            .zip(y1)
-                            .map(|d| XYPoint {
-                                // iterate over our data to construct a dataset
-                                x: d.0.into(), // use .into() to convert to a NumberorDateString
-                                y: d.1.into(),
-                                ..Default::default() // always use `..Default::default()` to make sure this works in the future
-                            })
-                            .collect::<BTreeSet<_>>()
-                            .to_dataset_data(), // collect into a BTreeSet<XYPoint>
-
+                        data: x.iter().zip(y1).into_data_iter().to_dataset_data(), // collect into dataset
                         borderColor: "red".into(),
                         backgroundColor: "lightcoral".into(),
                         pointRadius: 4.into(),
@@ -101,18 +90,7 @@ impl Model {
                         ..Default::default() // always use `..Default::default()` to make sure this works in the future
                     },
                     XYDataset {
-                        data: x
-                            .iter()
-                            .zip(y2)
-                            .map(|d| XYPoint {
-                                // iterate over our data to construct a dataset
-                                x: d.0.into(), // use .into() to convert to a NumberorDateString
-                                y: d.1.into(),
-                                ..Default::default() // always use `..Default::default()` to make sure this works in the future
-                            })
-                            .collect::<BTreeSet<_>>()
-                            .to_dataset_data(), // collect into a BTreeSet<XYPoint>
-
+                        data: x.iter().zip(y2).into_data_iter().to_dataset_data(), // collect into dataset
                         borderColor: "blue".into(),
                         backgroundColor: "lightskyblue".into(),
                         pointRadius: 4.into(),
@@ -149,19 +127,14 @@ impl Model {
                         data: x
                             .iter()
                             .zip(y1)
-                            .map(|(x, y)| XYPoint {
-                                // iterate over our data to construct a dataset
-                                x: x.into(), // use .into() to convert to a NumberorDateString
-                                y: y.into(),
-                                ..Default::default() // always use `..Default::default()` to make sure this works in the future
-                            })
                             .enumerate()
                             .map(|(x, d)| {
-                                if x % 5 == 0 { return XYPoint::NaN() }
-                                d
+                                if x % 5 == 0 { ("NaN".to_string(), "NaN".to_string()) } else {
+                                    (d.0.to_string(), d.1.to_string())
+                                }
                             })
-                        .collect::<BTreeSet<_>>()
-                        .to_dataset_data(), // collect into a BTreeSet<XYPoint>
+                            .into_data_iter()
+                            .to_dataset_data(), // collect into dataset
                         spanGaps: true.into(),
                         segment: Segment {
                             borderDash: FnWithArgs::new().arg("ctx").body("ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined"),
@@ -177,14 +150,8 @@ impl Model {
                         data: x
                             .iter()
                             .zip(y2)
-                            .map(|(x, y)| XYPoint {
-                                // iterate over our data to construct a dataset
-                                x: x.into(), // use .into() to convert to a NumberorDateString
-                                y: y.into(),
-                                ..Default::default() // always use `..Default::default()` to make sure this works in the future
-                            })
-                            .collect::<BTreeSet<_>>()
-                            .to_dataset_data(), // collect into a BTreeSet<XYPoint>
+                            .into_data_iter()
+                            .to_dataset_data(), // collect into dataset
 
                         borderColor: "blue".into(),
                         backgroundColor: "lightskyblue".into(),
@@ -238,14 +205,9 @@ impl Model {
                     data: data
                         .iter()
                         .enumerate()
-                        .map(|(x, y)| XYPoint {
-                            // iterate over our data to construct a dataset
-                            x: (x + 1).into(), // use enumerate to give us our X axis point
-                            y: y.into(),
-                            ..Default::default() // always use `..Default::default()` to make sure this works in the future
-                        })
-                        .collect::<BTreeSet<_>>()
-                        .to_dataset_data(), // collect into a BTreeSet<XYPoint>
+                        .map(|(x, y)| ((x + 1), y))
+                        .into_data_iter()
+                        .to_dataset_data(), // collect into dataset
 
                     backgroundColor: "palegreen".into(),
                     borderColor: "green".into(),
