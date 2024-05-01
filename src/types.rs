@@ -1057,6 +1057,9 @@ pub struct Font {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub weight: NumberString,
 
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub family: String,
+
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub lineHeight: NumberString,
 }

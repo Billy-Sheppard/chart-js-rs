@@ -10,7 +10,7 @@ use crate::{render_chart, update_chart};
 macro_rules! rationalize {
     ($set:ident, $name:expr) => {
         let s = $name.split('.').collect::<Vec<&str>>();
-        
+
         if let Ok(a) = Reflect::get(&$set, &s[0].into()) {
             // If the property is undefined, dont try serialize it
             if a == JsValue::UNDEFINED {

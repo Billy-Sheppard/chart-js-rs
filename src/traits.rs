@@ -17,7 +17,9 @@ where
 }
 
 pub trait DatasetIterExt: Iterator {
-    fn into_data_iter<X, Y>(self) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<String>)>
+    fn into_data_iter<X, Y>(
+        self,
+    ) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<String>)>
     where
         Self: Iterator<Item = (X, Y)> + Sized,
         X: Into<NumberOrDateString>,
@@ -25,12 +27,14 @@ pub trait DatasetIterExt: Iterator {
     {
         self.map(|(x, y)| (x.into(), y.into(), None))
     }
-    fn into_data_iter_with_description<X, Y, D>(self) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<String>)>
+    fn into_data_iter_with_description<X, Y, D>(
+        self,
+    ) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<String>)>
     where
         Self: Iterator<Item = (X, Y, D)> + Sized,
         X: Into<NumberOrDateString>,
         Y: Into<NumberString>,
-        D: Into<String>
+        D: Into<String>,
     {
         self.map(|(x, y, d)| (x.into(), y.into(), Some(d.into())))
     }

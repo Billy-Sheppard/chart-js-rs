@@ -14,8 +14,8 @@ pub mod utils;
 
 use gloo_utils::format::JsValueSerdeExt;
 use serde::{de::DeserializeOwned, Serialize};
-pub use types::*;
 pub use traits::*;
+pub use types::*;
 
 use utils::Chart;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
