@@ -1,4 +1,4 @@
-import { get_chart, render_chart, update_chart } from './snippets/chart-js-rs-0da7ccc98531ebc5/js/exports.js';
+import { get_chart, render_chart, update_chart } from './snippets/chart-js-rs-ab5a5e25153f6580/js/exports.js';
 
 let wasm;
 
@@ -241,7 +241,7 @@ function addBorrowedObject(obj) {
 }
 function __wbg_adapter_50(arg0, arg1, arg2) {
     try {
-        wasm.wasm_bindgen__convert__closures__invoke1_mut_ref__hdfcf179c56ddf8ea(arg0, arg1, addBorrowedObject(arg2));
+        wasm.wasm_bindgen__convert__closures__invoke1_mut_ref__h59fbda7fd521048b(arg0, arg1, addBorrowedObject(arg2));
     } finally {
         heap[stack_pointer++] = undefined;
     }
@@ -479,7 +479,7 @@ function __wbg_get_imports() {
         const ret = getObject(arg0).queueMicrotask;
         return addHeapObject(ret);
     };
-    imports.wbg.__wbg_renderchart_413ebfce597c0b16 = function(arg0, arg1, arg2, arg3, arg4, arg5) {
+    imports.wbg.__wbg_renderchart_cb20f7100666a73f = function(arg0, arg1, arg2, arg3, arg4, arg5) {
         let deferred0_0;
         let deferred0_1;
         try {
@@ -490,11 +490,11 @@ function __wbg_get_imports() {
             wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
         }
     };
-    imports.wbg.__wbg_updatechart_343fde3ed90cc144 = function(arg0, arg1, arg2, arg3) {
+    imports.wbg.__wbg_updatechart_228ef9289a759780 = function(arg0, arg1, arg2, arg3) {
         const ret = update_chart(takeObject(arg0), getStringFromWasm0(arg1, arg2), arg3 !== 0);
         return ret;
     };
-    imports.wbg.__wbg_getchart_3f10ed8d6ceedb67 = function(arg0, arg1) {
+    imports.wbg.__wbg_getchart_e0d18e4ffc077e11 = function(arg0, arg1) {
         const ret = get_chart(getStringFromWasm0(arg0, arg1));
         return addHeapObject(ret);
     };
