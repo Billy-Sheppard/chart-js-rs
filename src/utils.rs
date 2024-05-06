@@ -128,14 +128,19 @@ impl Chart {
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.legend") {
             rationalise(&legend, ("labels", "filter"));
         }
+
+        // Handle options.plugins.tooltip
+        if let Some(legend) = object_values_at(&self.obj, "options.plugins.tooltip") {
+            rationalise(&legend, ("callbacks", "label"));
+        }
     }
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FnWithArgs {
-    pub args: Vec<String>,
-    pub body: String,
-    pub return_value: String,
+    pub(crate) args: Vec<String>,
+    pub(crate) body: String,
+    pub(crate) return_value: String,
 }
 
 impl FnWithArgs {
