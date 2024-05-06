@@ -2,7 +2,7 @@ use js_sys::{Array, Function, Object, Reflect};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 
-use crate::{render_chart, update_chart};
+use crate::exports::*;
 
 /// Macro to make it easier to rationalize the chart options
 ///
@@ -110,6 +110,7 @@ impl Chart {
 pub struct FnWithArgs {
     pub args: Vec<String>,
     pub body: String,
+    pub return_value: String,
 }
 
 impl FnWithArgs {
@@ -126,12 +127,35 @@ impl FnWithArgs {
         self
     }
 
+    pub fn run_rust_fn<F>(&mut self, in_vars: &[String], out_var: String, _: F) -> Self {
+        self.body = format!(
+            "{}\nconst {out_var} = window.callbacks.{}({});",
+            self.body,
+            std::any::type_name::<F>()
+                .split("::")
+                .collect::<Vec<_>>()
+                .into_iter()
+                .next_back()
+                .unwrap(),
+            in_vars.join(", ")
+        );
+        self.to_owned()
+    }
+
     pub fn body(&mut self, body: &str) -> Self {
-        self.body = body.to_string();
+        self.body = format!("{}\n{body}", self.body);
+        self.to_owned()
+    }
+
+    pub fn return_value(&mut self, return_value: &str) -> Self {
+        self.return_value = return_value.to_string();
         self.to_owned()
     }
 
     pub fn build(&self) -> Function {
-        Function::new_with_args(&self.args.join(", "), &format!("return {}", self.body))
+        Function::new_with_args(
+            &self.args.join(", "),
+            &format!("{{ {}\nreturn {} }}", self.body, self.return_value),
+        )
     }
 }

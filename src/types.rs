@@ -871,7 +871,11 @@ pub struct ScaleTicks {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub precision: NumberString,
 
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
+    #[serde(
+        skip_serializing_if = "FnWithArgs::is_empty",
+        default,
+        skip_deserializing
+    )]
     pub callback: FnWithArgs,
 
     #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
@@ -1033,7 +1037,7 @@ pub struct DataLabels {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub font: Option<Font>,
 
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty")]
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     pub formatter: FnWithArgs,
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -1075,8 +1079,16 @@ pub struct Font {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Segment {
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
+    #[serde(
+        skip_serializing_if = "FnWithArgs::is_empty",
+        default,
+        skip_deserializing
+    )]
     pub borderDash: FnWithArgs,
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
+    #[serde(
+        skip_serializing_if = "FnWithArgs::is_empty",
+        default,
+        skip_deserializing
+    )]
     pub borderColor: FnWithArgs,
 }
