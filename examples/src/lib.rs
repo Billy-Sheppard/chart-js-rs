@@ -1,8 +1,4 @@
-use chart_js_rs::{
-    bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, utils::FnWithArgs, ChartExt,
-    ChartOptions, ChartScale, Dataset, DatasetDataExt, DatasetIterExt, NoAnnotations, ScaleTicks,
-    Segment, SinglePointDataset, XYDataset,
-};
+use chart_js_rs::{bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, *};
 use dominator::{events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
 use rand::Rng;
@@ -111,7 +107,7 @@ impl Model {
             .prop("id", id)
             .style("height", "calc(100vh - 270px)")
             .after_inserted(move |_| {
-                chart.into_chart().render_mutate(); // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
+                chart.into_chart().mutate().render();
             })
         })
     }
@@ -137,8 +133,12 @@ impl Model {
                             .to_dataset_data(), // collect into dataset
                         spanGaps: true.into(),
                         segment: Segment {
-                            borderDash: FnWithArgs::new().arg("ctx").body("ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined"),
-                            borderColor: FnWithArgs::new().arg("ctx").body("ctx.p0.skip || ctx.p1.skip ? 'rgb(0, 0, 0, 0.2)' : (ctx.p0.parsed.y > ctx.p1.parsed.y) ? 'rgb(255,0,0,1)' : 'rgb(0,255,0,1)'"),
+                            borderDash: FnWithArgs::new()
+                                .arg("ctx")
+                                .return_value("ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined"),
+                            borderColor: FnWithArgs::new()
+                                .arg("ctx")
+                                .return_value("ctx.p0.skip || ctx.p1.skip ? 'rgb(0, 0, 0, 0.2)' : (ctx.p0.parsed.y > ctx.p1.parsed.y) ? 'rgb(255,0,0,1)' : 'rgb(0,255,0,1)'"),
                         }
                         .into(),
                         pointRadius: 4.into(),
@@ -169,7 +169,10 @@ impl Model {
                     ChartScale {
                         r#type: "linear".into(),
                         ticks: ScaleTicks {
-                            callback: FnWithArgs::new().arg("value").arg("index").body("index % 2 === 0 ? this.getLabelForValue(value) : ''"),
+                            callback: FnWithArgs::new()
+                                .arg("value")
+                                .arg("index")
+                                .return_value("index % 2 === 0 ? this.getLabelForValue(value) : ''"),
                             ..Default::default()
                         }.into(),
                         ..Default::default()
@@ -185,7 +188,7 @@ impl Model {
             .prop("id", id)
             .style("height", "calc(100vh - 270px)")
             .after_inserted(move |_| {
-                chart.into_chart().render_mutate() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
+                chart.into_chart().mutate().render();
             })
         })
     }

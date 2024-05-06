@@ -26,10 +26,14 @@
     run();
   </script>
 </head>
+
 <body>
 </body>
-<script>
-  function mutate_chart_object(v) {
+<script type="module">
+  import * as root from './chart_js_rs_example.js'
+
+  window.callbacks = root;
+  window.mutate_chart_object = function (v) {
     if (v.id == "bar") {
       v.options.scales.y1.ticks = {
         callback:
@@ -38,9 +42,9 @@
           }
       };
     }
-    
+
     return v
-  }
+  };
 </script>
 
 </html>

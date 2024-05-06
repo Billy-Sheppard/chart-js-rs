@@ -29,8 +29,13 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
         data: Dataset { .. },
         ..Default::default()
     };
-    // to use any callbacks or functions you use render_mutate and refer to the JS below
-    chart.to_chart().render_mutate();
+    // to use any JS callbacks or functions you use render_mutate and refer to the JS below
+    chart.to_chart().mutate().render();
+
+    // to use any chart-js plugins, a few examples
+    chart.to_chart().plugins("[window['chartjs-plugin-autocolors']]").render(); // for autocolors and no mutating
+    chart.to_chart().mutate().plugins("[window['chartjs-plugin-autocolors']]").render(); // for autocolors and mutating
+    chart.to_chart().mutate().plugins("[ChartDataLabels, window['chartjs-plugin-autocolors']]").render(); // for datalabels, autocolors, and mutating
 
     // else use render
     chart.to_chart().render();
@@ -54,21 +59,22 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 ...
 
-<script>
-  // mutating charts
-  function mutate_chart_object(v) { // must have this function name
+<script type="module">
+  import * as root from './chart_js_rs_example.js'
+
+  window.callbacks = root;
+  window.mutate_chart_object = function (v) {
     if (v.id === ("[YOUR CHART ID HERE]")) {
-    // do any work here, this would prepend `$` to y1 axis tick labels
       v.options.scales.y1.ticks = {
         callback:
           function (value, _index, _values) {
             return '$' + value.toFixed(2);
           }
       };
-    };
+    }
 
     return v
-  }
+  };
 </script>
 ```
 
@@ -88,6 +94,13 @@ It is important then, that you know which variables are being parsed to the func
 
 `FnWithArgs` is used, for example, in implimenting conditional line segment colouring, according to the [docs](https://www.chartjs.org/docs/latest/samples/line/segments.html).
 ```rust
+  #[wasm_bindgen] // your function must be a wasm_bindgen export
+  pub fn add(a: u32, b: u32) -> u32 {
+      a + b
+  }
+
+  // ...
+
   Scatter::</*...*/> {
     data: {
       datasets: vec![
@@ -96,8 +109,25 @@ It is important then, that you know which variables are being parsed to the func
           segment: Segment {
             borderColor: 
               FnWithArgs::new() // Create the Function
-                .arg("ctx") // Add a named argument using a builder pattern
-                .body("ctx.p0.parsed.y > ctx.p1.parsed.y ? 'red' : 'green'") // Add the function body, in this case make the line red if the slope is negative
+                .arg("ctx") // Add a named argument using a builder pattern, you can have as many arugments as required
+
+                // run rust fn takes your input params, output variable name, and function pointer
+                // this will produce 
+                // const output = window.callbacks.add(1, 1);
+                // return ctx.p0.parsed.y > ctx.p1.parsed.y ? 'red' : 'green'
+                .run_rust_fn(&["1".into(), "1".into()], "output".into(), add) 
+
+                // .body() can be used to add any other javascript
+                .body("console.log(output)")
+
+                .return_value("ctx.p0.parsed.y > ctx.p1.parsed.y ? 'red' : 'green'") // Add the function body, in this case make the line red if the slope is negative
+
+                // this will produce
+                // function(ctx) {
+                //   const output = windows.callbacks.add(1, 1);
+                //   console.log(output);
+                //   return ctx.p0.parsed.y > ctx.p1.parsed.y ? 'red' : 'green'
+                // }
           }
         }
       ]
