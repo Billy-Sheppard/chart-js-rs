@@ -535,13 +535,15 @@ pub struct TooltipPlugins {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TooltipCallbacks {
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty")]
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub label: FnWithArgs,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChartScale {
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty")]
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub afterBuildTicks: FnWithArgs,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alignToPixels: Option<bool>,
@@ -549,7 +551,8 @@ pub struct ChartScale {
     pub backgroundColour: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub barPercentage: NumberString,
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty")]
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub beforeFit: FnWithArgs,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub beginAtZero: Option<bool>,
@@ -621,6 +624,7 @@ pub struct Grid {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub drawOnChartArea: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default, skip_deserializing)]
+    // the skip_deserializing needed because chartjs sets a default with a different type, FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub tickColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub z: NumberString,
@@ -710,7 +714,7 @@ pub struct ScaleTicks {
     #[serde(
         skip_serializing_if = "FnWithArgs::is_empty",
         default,
-        skip_deserializing
+        skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     )]
     pub callback: FnWithArgs,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -718,6 +722,7 @@ pub struct ScaleTicks {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub maxTicksLimit: NumberString,
     #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
+    // the skip_deserializing needed because chartjs sets a default with a different type, FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub padding: Option<Padding>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub precision: NumberString,
@@ -767,7 +772,8 @@ pub struct LegendLabel {
     pub boxHeight: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub boxWidth: Option<usize>,
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty")]
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub filter: FnWithArgs,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub pointStyle: String,
@@ -846,6 +852,7 @@ pub struct DataLabels {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub font: Option<Font>,
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub formatter: FnWithArgs,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub offset: NumberString,
@@ -886,13 +893,13 @@ pub struct Segment {
     #[serde(
         skip_serializing_if = "FnWithArgs::is_empty",
         default,
-        skip_deserializing
+        skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     )]
     pub borderColor: FnWithArgs,
     #[serde(
         skip_serializing_if = "FnWithArgs::is_empty",
         default,
-        skip_deserializing
+        skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     )]
     pub borderDash: FnWithArgs,
 }
