@@ -29,8 +29,13 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
         data: Dataset { .. },
         ..Default::default()
     };
-    // to use any callbacks or functions you use render_mutate and refer to the JS below
-    chart.to_chart().render_mutate();
+    // to use any JS callbacks or functions you use render_mutate and refer to the JS below
+    chart.to_chart().mutate().render();
+
+    // to use any chart-js plugins, a few examples
+    chart.to_chart().plugins("[autocolors]").render(); 
+    chart.to_chart().mutate().plugins("[autocolors]").render(); 
+    chart.to_chart().mutate().plugins("[ChartDataLabels, autocolours]").render(); 
 
     // else use render
     chart.to_chart().render();

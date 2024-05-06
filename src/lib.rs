@@ -11,25 +11,26 @@ pub mod traits;
 pub mod types;
 
 #[doc(hidden)]
-pub mod utils;
+mod utils;
 
 use exports::get_chart;
 use gloo_utils::format::JsValueSerdeExt;
 use serde::{de::DeserializeOwned, Serialize};
 pub use traits::*;
 pub use types::*;
-
-use utils::Chart;
+pub use utils::*;
 
 pub trait ChartExt: DeserializeOwned + Serialize {
     fn get_id(self) -> String;
 
     fn into_chart(self) -> Chart {
-        Chart(
-            <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
+        Chart {
+            obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
                 .expect("Unable to serialize chart."),
-            self.get_id(),
-        )
+            id: self.get_id(),
+            mutate: false,
+            plugins: String::new(),
+        }
     }
 
     fn get_chart_from_id(id: &str) -> Option<Self> {
