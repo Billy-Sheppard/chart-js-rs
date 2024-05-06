@@ -569,7 +569,7 @@ pub struct Animation {
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 pub struct ChartPlugins<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub autocolors: Option<bool>,
+    pub autocolors: Option<AutoColors>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tooltip: Option<TooltipPlugins>,
@@ -603,6 +603,12 @@ pub struct PluginLegend {
 pub struct Annotations<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<HashMap<String, A>>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct AutoColors {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub mode: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -740,7 +746,7 @@ pub struct Grid {
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub color: String,
 
-    #[serde(skip_serializing_if = "String::is_empty", default)]
+    #[serde(skip_serializing_if = "String::is_empty", default, skip_deserializing)]
     pub tickColor: String,
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -868,7 +874,7 @@ pub struct ScaleTicks {
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
     pub callback: FnWithArgs,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
     pub padding: Option<Padding>,
 }
 
@@ -1026,6 +1032,9 @@ pub struct DataLabels {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub font: Option<Font>,
+
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty")]
+    pub formatter: FnWithArgs,
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub z: NumberString,
