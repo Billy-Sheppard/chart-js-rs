@@ -2,8 +2,8 @@
 #![doc = include_str!("../README.md")]
 
 pub mod bar;
-pub mod exports;
 pub mod doughnut;
+pub mod exports;
 pub mod functions;
 pub mod pie;
 pub mod scatter;
