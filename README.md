@@ -59,7 +59,7 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
 
   window.callbacks = root;
   window.mutate_chart_object = function (v) {
-    if (v.id == "bar") {
+    if (v.id === ("[YOUR CHART ID HERE]")) {
       v.options.scales.y1.ticks = {
         callback:
           function (value, _index, _values) {
