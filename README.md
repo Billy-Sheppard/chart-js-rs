@@ -87,6 +87,8 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 `.mutate().render()` allows for chart objects to be accessible in your javascript file, so you can mutate the object however required, especially useful for ChartJS functions not yet available in this library.
 
+`.plugins("[MyPlugin]").mutate().render()` allows for ChartJS plugins to be used with your charts, the parameter is the direct string representation of the Javascript array containing your plugins. [Docs](https://www.chartjs.org/docs/latest/developers/plugins.html)
+
 ## How to use `struct FnWithArgs`?
 `FnWithArgs` is a helper struct to allow serialization of javascript functions by encoding their body and arguments as a string. Then, as needed, the function can be rebuilt in JavaScipt, and called.
 
