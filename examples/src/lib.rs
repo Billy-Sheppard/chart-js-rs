@@ -1,11 +1,12 @@
 use chart_js_rs::{bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, *};
 use dominator::{events, html, Dom};
 use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
+use itertools::Itertools;
 use rand::Rng;
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     pin::Pin,
-    rc::Rc,
+    sync::Arc,
     task::{Context, Poll},
 };
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
@@ -21,32 +22,49 @@ fn random() -> Vec<usize> {
 #[derive(Debug, Clone)]
 pub struct Model {
     tick: Mutable<bool>,
-    chart: Mutable<&'static str>,
-    x: Mutable<Rc<Vec<usize>>>,
-    y1: Mutable<Rc<Vec<usize>>>,
-    y2: Mutable<Rc<Vec<usize>>>,
+    chart: Mutable<Arc<str>>,
+    x: Mutable<Arc<Vec<usize>>>,
+    y1: Mutable<Arc<Vec<usize>>>,
+    y2: Mutable<Arc<Vec<usize>>>,
 }
 impl Model {
-    async fn init() -> Rc<Self> {
+    async fn init() -> Arc<Self> {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-        Rc::new(Model {
+        let query_string = gloo::utils::window()
+            .location()
+            .search()
+            .unwrap_or_default()
+            .replace('?', "");
+        let query = query_string
+            .split('=')
+            .tuples::<(&str, &str)>()
+            .collect::<BTreeMap<&str, &str>>();
+
+        Arc::new(Model {
             tick: Mutable::default(),
-            chart: Mutable::new("scatter"),
-            x: Mutable::new(Rc::new((0..=20).collect())),
-            y1: Mutable::new(Rc::new(random())),
-            y2: Mutable::new(Rc::new(random())),
+            chart: Mutable::new(query.get("chart").cloned().unwrap_or("scatter").into()),
+            x: Mutable::new(Arc::new((0..=20).collect())),
+            y1: Mutable::new(Arc::new(random())),
+            y2: Mutable::new(Arc::new(random())),
         })
     }
 
-    fn chart_selected(self: Rc<Self>, chart: &'static str) -> impl Signal<Item = bool> {
-        self.chart.signal_cloned().map(move |c| c == chart)
-    }
-    fn chart_not_selected(self: Rc<Self>, chart: &'static str) -> impl Signal<Item = bool> {
-        self.chart.signal_cloned().map(move |c| c != chart)
+    fn set_query(self: Arc<Model>) {
+        gloo::utils::window()
+            .location()
+            .set_search(&format!("chart={}", self.chart.get_cloned()))
+            .unwrap();
     }
 
-    fn show_charts(self: Rc<Self>) -> impl Signal<Item = Option<Dom>> {
+    fn chart_selected(self: Arc<Self>, chart: &'static str) -> impl Signal<Item = bool> {
+        self.chart.signal_cloned().map(move |c| c.as_ref() == chart)
+    }
+    fn chart_not_selected(self: Arc<Self>, chart: &'static str) -> impl Signal<Item = bool> {
+        self.chart.signal_cloned().map(move |c| c.as_ref() != chart)
+    }
+
+    fn show_charts(self: Arc<Self>) -> impl Signal<Item = Option<Dom>> {
         Mutable4::new(
             self.chart.clone(),
             self.x.clone(),
@@ -69,7 +87,7 @@ impl Model {
         })
     }
 
-    fn show_scatter(self: Rc<Self>, x: &[usize], y1: &[usize], y2: &[usize]) -> Dom {
+    fn show_scatter(self: Arc<Self>, x: &[usize], y1: &[usize], y2: &[usize]) -> Dom {
         // construct and render chart here
         let id = "scatter";
 
@@ -111,9 +129,9 @@ impl Model {
             })
         })
     }
-    fn show_line(self: Rc<Self>, x: &[usize], y1: &[usize], y2: &[usize]) -> Dom {
+    fn show_line(self: Arc<Self>, x: &[usize], y1: &[usize], y2: &[usize]) -> Dom {
         // construct and render chart here
-        let id = "scatter";
+        let id = "line";
 
         let chart = Scatter::<NoAnnotations> {
             // we use <NoAnnotations> here to type hint for the compiler
@@ -138,10 +156,12 @@ impl Model {
                                 .return_value("ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined"),
                             borderColor: FnWithArgs::new()
                                 .arg("ctx")
-                                .return_value("ctx.p0.skip || ctx.p1.skip ? 'rgb(0, 0, 0, 0.2)' : (ctx.p0.parsed.y > ctx.p1.parsed.y) ? 'rgb(255,0,0,1)' : 'rgb(0,255,0,1)'"),
+                                .return_value("ctx.p0.skip || ctx.p1.skip ? 'lightgrey' : (ctx.p0.parsed.y > ctx.p1.parsed.y) ? 'firebrick' : 'green'"),
                         }
                         .into(),
                         pointRadius: 4.into(),
+                        pointBorderColor: "darkgreen".into(),
+                        pointBackgroundColor: "palegreen".into(),
                         label: "Dataset 1".into(),
                         r#type: "line".into(),
                         ..Default::default() // always use `..Default::default()` to make sure this works in the future
@@ -155,6 +175,8 @@ impl Model {
 
                         borderColor: "blue".into(),
                         backgroundColor: "lightskyblue".into(),
+                        pointBorderColor: "blue".into(),
+                        pointBackgroundColor: "lightskyblue".into(),
                         pointRadius: 4.into(),
                         label: "Dataset 2".into(),
                         r#type: "line".into(),
@@ -193,7 +215,7 @@ impl Model {
         })
     }
 
-    fn show_bar(self: Rc<Self>, data: &[usize]) -> Dom {
+    fn show_bar(self: Arc<Self>, data: &[usize]) -> Dom {
         // construct and render chart here
         let id = "bar";
 
@@ -236,7 +258,7 @@ impl Model {
         })
     }
 
-    fn show_donut(self: Rc<Self>) -> Dom {
+    fn show_donut(self: Arc<Self>) -> Dom {
         // construct and render chart here
         let three_id = "donut_a";
         let four_id = "donut_b";
@@ -330,7 +352,7 @@ impl Model {
         })
     }
 
-    fn render(self: Rc<Self>) -> Dom {
+    fn render(self: Arc<Self>) -> Dom {
         html!("div", {
             .class("section")
             .child(
@@ -345,8 +367,8 @@ impl Model {
                                 let model = self.clone();
                                 move |_: events::Click| {
                                     // randomise the data on button click
-                                    model.clone().y1.set(Rc::new(random()));
-                                    model.clone().y2.set(Rc::new(random()));
+                                    model.clone().y1.set(Arc::new(random()));
+                                    model.clone().y2.set(Arc::new(random()));
                                 }
                             })
                         })
@@ -359,7 +381,8 @@ impl Model {
                             .event({
                                 let model = self.clone();
                                 move |_: events::Click| {
-                                    model.clone().chart.set("scatter"); // change which chart is in view
+                                    model.clone().chart.set("scatter".into()); // change which chart is in view
+                                    model.clone().set_query();
                                 }
                             })
                         })
@@ -372,7 +395,8 @@ impl Model {
                             .event({
                                 let model = self.clone();
                                 move |_: events::Click| {
-                                    model.clone().chart.set("line"); // change which chart is in view
+                                    model.clone().chart.set("line".into()); // change which chart is in view
+                                    model.clone().set_query();
                                 }
                             })
                         })
@@ -385,7 +409,8 @@ impl Model {
                             .event({
                                 let model = self.clone();
                                 move |_: events::Click| {
-                                    model.clone().chart.set("bar"); // change which chart is in view
+                                    model.clone().chart.set("bar".into()); // change which chart is in view
+                                    model.clone().set_query();
                                 }
                             })
                         })
@@ -398,13 +423,14 @@ impl Model {
                             .event({
                                 let model = self.clone();
                                 move |_: events::Click| {
-                                    model.clone().chart.set("donut"); // change which chart is in view
+                                    model.clone().chart.set("donut".into()); // change which chart is in view
+                                    model.clone().set_query();
                                 }
                             })
                         })
                     )
-                    .child_signal(self.chart.signal().map(|c|
-                        if c == "scatter" {
+                    .child_signal(self.chart.signal_cloned().map(|c|
+                        if c.as_ref() == "scatter" {
                             Some(html!("button", {
                                 .class("button")
                                 .prop("disabled", true)
@@ -414,10 +440,10 @@ impl Model {
                             None
                         })
                     )
-                    .child_signal(self.chart.signal().map({
+                    .child_signal(self.chart.signal_cloned().map({
                         let _self = self.clone();
                         move |c|
-                            if c == "scatter" {
+                            if c.as_ref() == "scatter" {
                                 Some(
                                     html!("button", {
                                         .class(["button", "is-info"])
@@ -448,10 +474,10 @@ impl Model {
                             }
                         })
                     )
-                    .child_signal(self.chart.signal().map({
+                    .child_signal(self.chart.signal_cloned().map({
                         let _self = self.clone();
                         move |c|
-                            if c == "scatter" {
+                            if c.as_ref() == "scatter" {
                                 Some(
                                     html!("button", {
                                         .class(["button", "is-info"])
