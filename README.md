@@ -92,7 +92,8 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 It is important then, that you know which variables are being parsed to the function. For this information, you can refer to the [Chart.js documentation](https://www.chartjs.org/docs/latest/).
 
-`FnWithArgs` is used, for example, in implimenting conditional line segment colouring, according to the [docs](https://www.chartjs.org/docs/latest/samples/line/segments.html).
+`FnWithArgs` is used, for example, in implementing conditional line segment colouring, according to the [docs](https://www.chartjs.org/docs/latest/samples/line/segments.html). 
+It can also be used to leaverage logic written in Rust, to calculate outputs for ChartJS.
 ```rust
   #[wasm_bindgen] // your function must be a wasm_bindgen export
   pub fn add(a: u32, b: u32) -> u32 {
