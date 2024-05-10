@@ -2,7 +2,7 @@ use js_sys::{Array, Function, Object, Reflect};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 
-use crate::exports::*;
+use crate::{exports::*, FnWithArgsOrAny};
 
 fn rationalise(obj: &JsValue, name: (&'static str, &'static str)) {
     if let Ok(a) = Reflect::get(obj, &name.0.into()) {
@@ -17,14 +17,12 @@ fn rationalise(obj: &JsValue, name: (&'static str, &'static str)) {
                 return;
             }
 
-            Reflect::set(
-                &a,
-                &name.1.into(),
-                &serde_wasm_bindgen::from_value::<FnWithArgs>(b)
-                    .unwrap()
-                    .build(),
-            )
-            .unwrap();
+            match serde_wasm_bindgen::from_value::<FnWithArgsOrAny>(b).unwrap() {
+                FnWithArgsOrAny::Any(_) => (),
+                FnWithArgsOrAny::FnWithArgs(fnwa) => {
+                    Reflect::set(&a, &name.1.into(), &fnwa.build()).unwrap();
+                }
+            }
         }
     }
 }
@@ -37,6 +35,7 @@ pub struct Chart {
     pub(crate) id: String,
     pub(crate) mutate: bool,
     pub(crate) plugins: String,
+    pub(crate) defaults: String,
 }
 
 /// Walks the JsValue object to get the value of a nested property
@@ -93,9 +92,15 @@ impl Chart {
         self.clone()
     }
 
+    #[must_use = "\nAppend .render()\n"]
+    pub fn defaults(&mut self, defaults: impl Into<String>) -> Self {
+        self.defaults = format!("{}\n{}", self.defaults, defaults.into());
+        self.to_owned()
+    }
+
     pub fn render(self) {
         self.rationalise_js();
-        render_chart(self.obj, &self.id, self.mutate, self.plugins);
+        render_chart(self.obj, &self.id, self.mutate, self.plugins, self.defaults);
     }
 
     pub fn update(self, animate: bool) -> bool {
@@ -113,6 +118,8 @@ impl Chart {
                 rationalise(&dataset, ("segment", "borderDash"));
                 rationalise(&dataset, ("segment", "borderColor"));
                 rationalise(&dataset, ("datalabels", "formatter"));
+                rationalise(&dataset, ("datalabels", "display"));
+                rationalise(&dataset, ("datalabels", "offset"));
             });
 
         // Handle options.scales

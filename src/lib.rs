@@ -30,6 +30,7 @@ pub trait ChartExt: DeserializeOwned + Serialize {
             id: self.get_id(),
             mutate: false,
             plugins: String::new(),
+            defaults: String::new(),
         }
     }
 

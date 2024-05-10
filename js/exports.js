@@ -2,11 +2,15 @@ export function get_chart(id) {
     return Chart.getChart(document.getElementById(id)).config._config
 }
 
-export function render_chart(v, id, mutate, plugins) {
+export function render_chart(v, id, mutate, plugins, defaults) {
     console.debug('Before mutate:', v);
 
     let obj;
     
+    if (defaults != null || defaults != undefined) {
+        defaults = eval(defaults);
+    }
+
     if (plugins != null || plugins != undefined) {
         v.plugins = eval(plugins);
     }

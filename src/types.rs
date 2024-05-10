@@ -39,19 +39,41 @@ pub struct Dataset<D: DatasetTrait> {
     pub datasets: D,
     pub labels: Option<Vec<NumberOrDateString>>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(untagged)]
-enum StringOrInt {
+pub enum Any {
     String(String),
     Int(isize),
+    Bool(bool),
     Vec(Vec<()>),
 }
-impl Display for StringOrInt {
+impl From<bool> for Any {
+    fn from(value: bool) -> Self {
+        Self::Bool(value)
+    }
+}
+impl From<String> for Any {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+impl Any {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Any::String(s) => s.is_empty(),
+            Any::Int(_i) => false,
+            Any::Bool(_b) => false,
+            Any::Vec(v) => v.is_empty(),
+        }
+    }
+}
+impl Display for Any {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StringOrInt::String(s) => write!(f, "{s}"),
-            StringOrInt::Int(i) => write!(f, "{i}"),
-            StringOrInt::Vec(_) => write!(f, ""),
+            Any::String(s) => write!(f, "{s}"),
+            Any::Bool(b) => write!(f, "{b}"),
+            Any::Int(i) => write!(f, "{i}"),
+            Any::Vec(_) => write!(f, ""),
         }
     }
 }
@@ -116,7 +138,7 @@ impl<'de> Deserialize<'de> for NumberOrDateString {
     where
         D: serde::Deserializer<'de>,
     {
-        StringOrInt::deserialize(deserializer).map(|soi| Self(soi.to_string()))
+        Any::deserialize(deserializer).map(|soi| Self(soi.to_string()))
     }
 }
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -156,7 +178,37 @@ impl<'de> Deserialize<'de> for BoolString {
     where
         D: serde::Deserializer<'de>,
     {
-        StringOrInt::deserialize(deserializer).map(|soi| Self(soi.to_string()))
+        Any::deserialize(deserializer).map(|soi| Self(soi.to_string()))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum FnWithArgsOrAny {
+    Any(Any),
+    FnWithArgs(FnWithArgs),
+}
+impl FnWithArgsOrAny {
+    fn is_empty(&self) -> bool {
+        match self {
+            FnWithArgsOrAny::Any(a) => a.is_empty(),
+            FnWithArgsOrAny::FnWithArgs(fnwa) => fnwa.is_empty(),
+        }
+    }
+}
+impl Default for FnWithArgsOrAny {
+    fn default() -> Self {
+        FnWithArgsOrAny::Any(Any::from(false))
+    }
+}
+impl<T: Display> From<T> for FnWithArgsOrAny {
+    fn from(s: T) -> Self {
+        Self::Any(s.to_string().into())
+    }
+}
+impl From<FnWithArgs> for FnWithArgsOrAny {
+    fn from(value: FnWithArgs) -> Self {
+        Self::FnWithArgs(value)
     }
 }
 
@@ -221,7 +273,7 @@ impl<'de> Deserialize<'de> for NumberString {
     where
         D: serde::Deserializer<'de>,
     {
-        StringOrInt::deserialize(deserializer).map(|soi| Self(soi.to_string()))
+        Any::deserialize(deserializer).map(|soi| Self(soi.to_string()))
     }
 }
 
@@ -845,8 +897,9 @@ pub struct DataLabels {
     pub clip: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub color: String,
-    #[serde(default = "BoolString::false_")]
-    pub display: Option<BoolString>,
+    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub display: FnWithArgsOrAny,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub drawTime: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -854,8 +907,9 @@ pub struct DataLabels {
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub formatter: FnWithArgs,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub offset: NumberString,
+    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub offset: FnWithArgsOrAny,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub padding: Option<Padding>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]

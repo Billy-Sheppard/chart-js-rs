@@ -89,6 +89,8 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 `.plugins("[MyPlugin]").mutate().render()` allows for ChartJS plugins to be used with your charts, the parameter is the direct string representation of the Javascript array containing your plugins. [Docs](https://www.chartjs.org/docs/latest/developers/plugins.html)
 
+`.plugins("[MyPlugin]").defaults("Chart.defaults.font.size = 20;").mutate().render()` allows for ChartJS defaults to be set.
+
 ## How to use `struct FnWithArgs`?
 `FnWithArgs` is a helper struct to allow serialization of javascript functions by encoding their body and arguments as a string. Then, as needed, the function can be rebuilt in JavaScipt, and called.
 
