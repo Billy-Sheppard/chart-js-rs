@@ -590,6 +590,9 @@ pub struct TooltipCallbacks {
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub label: FnWithArgs,
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub title: FnWithArgs,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]

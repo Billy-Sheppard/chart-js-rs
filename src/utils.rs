@@ -139,6 +139,7 @@ impl Chart {
         // Handle options.plugins.tooltip
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.tooltip") {
             rationalise(&legend, ("callbacks", "label"));
+            rationalise(&legend, ("callbacks", "title"));
         }
     }
 }
