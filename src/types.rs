@@ -1,7 +1,10 @@
 use {
     crate::{traits::*, utils::FnWithArgs},
-    serde::{Deserialize, Serialize},
-    std::{collections::HashMap, fmt::Debug, fmt::Display},
+    serde::{de, Deserialize, Serialize},
+    std::{
+        collections::HashMap,
+        fmt::{Debug, Display},
+    },
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
@@ -695,9 +698,8 @@ pub struct LineAnnotation {
     pub borderWidth: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub drawTime: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    #[serde(rename = "type")]
-    pub r#type: String,
+    #[serde(default, rename = "type")]
+    pub r#type: LineAnnotationType,
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
     pub xMax: NumberOrDateString,
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
@@ -710,6 +712,30 @@ pub struct LineAnnotation {
     pub yScaleID: NumberString,
 }
 impl Annotation for LineAnnotation {}
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LineAnnotationType;
+impl<'de> Deserialize<'de> for LineAnnotationType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        match String::deserialize(deserializer)?.to_lowercase().as_str() {
+            "line" => Ok(LineAnnotationType),
+            other => Err(de::Error::custom(format!(
+                "`{other}` is not a valid LineAnnotationType."
+            ))),
+        }
+    }
+}
+impl Serialize for LineAnnotationType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str("line")
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BoxAnnotation {
     #[serde(skip_serializing_if = "String::is_empty", default)]
@@ -722,19 +748,41 @@ pub struct BoxAnnotation {
     pub borderWidth: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub drawTime: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    #[serde(rename = "type")]
-    pub r#type: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub xMax: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub xMin: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub yMax: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub yMin: String,
+    #[serde(default, rename = "type")]
+    pub r#type: BoxAnnotationType,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub xMax: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub xMin: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub yMax: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub yMin: NumberString,
 }
 impl Annotation for BoxAnnotation {}
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BoxAnnotationType;
+impl<'de> Deserialize<'de> for BoxAnnotationType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        match String::deserialize(deserializer)?.to_lowercase().as_str() {
+            "box" => Ok(BoxAnnotationType),
+            other => Err(de::Error::custom(format!(
+                "`{other}` is not a valid BoxAnnotationType."
+            ))),
+        }
+    }
+}
+impl Serialize for BoxAnnotationType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str("box")
+    }
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ScaleTime {
@@ -830,6 +878,8 @@ pub struct LegendLabel {
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub filter: FnWithArgs,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub font: Option<Font>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub pointStyle: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
