@@ -812,6 +812,8 @@ pub struct DisplayFormats {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ScaleTicks {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub autoSkip: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub align: String,
     #[serde(
@@ -824,6 +826,8 @@ pub struct ScaleTicks {
     pub count: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub font: Option<Font>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub includeBounds: Option<bool>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub maxTicksLimit: NumberString,
     #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]

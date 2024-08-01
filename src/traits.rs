@@ -4,14 +4,18 @@ use std::collections::*;
 
 pub trait DatasetTrait: Serialize {}
 pub trait DatasetDataExt {
-    fn to_dataset_data(self) -> DatasetData;
+    fn presorted_to_dataset_data(self) -> DatasetData;
+    fn unsorted_to_dataset_data(self) -> DatasetData;
 }
 
 impl<I> DatasetDataExt for I
 where
     I: Iterator<Item = (NumberOrDateString, NumberString, Option<String>)>,
 {
-    fn to_dataset_data(self) -> DatasetData {
+    fn presorted_to_dataset_data(self) -> DatasetData {
+        DatasetData(serde_json::to_value(self.map(XYPoint::from).collect::<Vec<_>>()).unwrap())
+    }
+    fn unsorted_to_dataset_data(self) -> DatasetData {
         DatasetData(serde_json::to_value(self.map(XYPoint::from).collect::<BTreeSet<_>>()).unwrap())
     }
 }
