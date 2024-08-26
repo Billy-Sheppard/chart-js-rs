@@ -117,10 +117,12 @@ impl Chart {
             .for_each(|dataset| {
                 rationalise(&dataset, ("segment", "borderDash"));
                 rationalise(&dataset, ("segment", "borderColor"));
-                rationalise(&dataset, ("datalabels", "formatter"));
-                rationalise(&dataset, ("datalabels", "display"));
-                rationalise(&dataset, ("datalabels", "offset"));
+                rationalise(&dataset, ("datalabels", "align"));
+                rationalise(&dataset, ("datalabels", "anchor"));
                 rationalise(&dataset, ("datalabels", "backgroundColor"));
+                rationalise(&dataset, ("datalabels", "display"));
+                rationalise(&dataset, ("datalabels", "formatter"));
+                rationalise(&dataset, ("datalabels", "offset"));
             });
 
         // Handle options.scales

@@ -517,6 +517,8 @@ pub struct ChartOptions<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub legend: Option<ChartLegend>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub layout: Option<ChartLayout>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub maintainAspectRatio: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub plugins: Option<ChartPlugins<A>>,
@@ -594,6 +596,12 @@ pub struct TooltipPlugins {
     pub titleColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub titleMarginBottom: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ChartLayout {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub padding: Option<Padding>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -952,18 +960,18 @@ pub struct PointElementConfiguration {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DataLabels {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub align: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub anchor: String,
+    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    pub align: FnWithArgsOrAny,
+    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    pub anchor: FnWithArgsOrAny,
     #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
     pub backgroundColor: FnWithArgsOrAny,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub borderRadius: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub clip: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub clamp: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clip: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub color: String,
     #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
@@ -979,6 +987,8 @@ pub struct DataLabels {
     #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub offset: FnWithArgsOrAny,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub opacity: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub padding: Option<Padding>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
