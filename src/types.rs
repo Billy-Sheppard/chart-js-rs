@@ -18,6 +18,10 @@ impl DatasetData {
             .unwrap()
             .is_empty()
     }
+
+    pub fn from_minmax_array(iter: impl Iterator<Item = [NumberOrDateString; 2]>) -> Self {
+        DatasetData(serde_json::to_value(iter.collect::<Vec<_>>()).unwrap())
+    }
 }
 impl PartialOrd for DatasetData {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -366,6 +370,12 @@ impl DatasetTrait for Vec<SinglePointDataset> {}
 pub struct XYDataset {
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub backgroundColor: String,
+    #[serde(
+        skip_serializing_if = "Vec::is_empty",
+        default,
+        rename = "backgroundColor"
+    )]
+    pub backgroundColorArray: Vec<String>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub barPercentage: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -485,8 +495,6 @@ impl Ord for XYPoint {
         self.x.cmp(&other.x)
     }
 }
-
-pub type MinMaxPoint = [NumberOrDateString; 2];
 
 impl From<(NumberOrDateString, NumberString, Option<String>)> for XYPoint {
     fn from((x, y, d): (NumberOrDateString, NumberString, Option<String>)) -> Self {
@@ -948,12 +956,14 @@ pub struct DataLabels {
     pub align: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub anchor: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub backgroundColor: String,
+    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    pub backgroundColor: FnWithArgsOrAny,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub borderRadius: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clip: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clamp: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub color: String,
     #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]

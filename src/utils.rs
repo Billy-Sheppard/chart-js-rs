@@ -120,6 +120,7 @@ impl Chart {
                 rationalise(&dataset, ("datalabels", "formatter"));
                 rationalise(&dataset, ("datalabels", "display"));
                 rationalise(&dataset, ("datalabels", "offset"));
+                rationalise(&dataset, ("datalabels", "backgroundColor"));
             });
 
         // Handle options.scales

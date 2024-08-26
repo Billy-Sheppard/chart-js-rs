@@ -96,7 +96,7 @@ impl Model {
             data: Dataset {
                 datasets: Vec::from([
                     XYDataset {
-                        data: x.iter().zip(y1).into_data_iter().to_dataset_data(), // collect into dataset
+                        data: x.iter().zip(y1).into_data_iter().unsorted_to_dataset_data(), // collect into dataset
                         borderColor: "red".into(),
                         backgroundColor: "lightcoral".into(),
                         pointRadius: 4.into(),
@@ -104,7 +104,7 @@ impl Model {
                         ..Default::default() // always use `..Default::default()` to make sure this works in the future
                     },
                     XYDataset {
-                        data: x.iter().zip(y2).into_data_iter().to_dataset_data(), // collect into dataset
+                        data: x.iter().zip(y2).into_data_iter().unsorted_to_dataset_data(), // collect into dataset
                         borderColor: "blue".into(),
                         backgroundColor: "lightskyblue".into(),
                         pointRadius: 4.into(),
@@ -148,7 +148,7 @@ impl Model {
                                 }
                             })
                             .into_data_iter()
-                            .to_dataset_data(), // collect into dataset
+                            .unsorted_to_dataset_data(), // collect into dataset
                         spanGaps: true.into(),
                         segment: Segment {
                             borderDash: FnWithArgs::new()
@@ -171,7 +171,7 @@ impl Model {
                             .iter()
                             .zip(y2)
                             .into_data_iter()
-                            .to_dataset_data(), // collect into dataset
+                            .unsorted_to_dataset_data(), // collect into dataset
 
                         borderColor: "blue".into(),
                         backgroundColor: "lightskyblue".into(),
@@ -232,7 +232,7 @@ impl Model {
                         .enumerate()
                         .map(|(x, y)| ((x + 1), y))
                         .into_data_iter()
-                        .to_dataset_data(), // collect into dataset
+                        .unsorted_to_dataset_data(), // collect into dataset
 
                     backgroundColor: "palegreen".into(),
                     borderColor: "green".into(),
