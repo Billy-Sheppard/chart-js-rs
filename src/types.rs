@@ -1,6 +1,7 @@
 use {
     crate::{traits::*, utils::FnWithArgs},
     serde::{de, Deserialize, Serialize},
+    serde_json::Value,
     std::{
         collections::HashMap,
         fmt::{Debug, Display},
@@ -17,6 +18,10 @@ impl DatasetData {
             .as_array()
             .unwrap()
             .is_empty()
+    }
+
+    pub fn from_single_point_array(iter: impl Iterator<Item = [NumberOrDateString; 1]>) -> Self {
+        DatasetData(serde_json::to_value(iter.collect::<Vec<_>>()).unwrap())
     }
 
     pub fn from_minmax_array(iter: impl Iterator<Item = [NumberOrDateString; 2]>) -> Self {
@@ -368,8 +373,8 @@ impl DatasetTrait for Vec<SinglePointDataset> {}
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct XYDataset {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub backgroundColor: String,
+    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    pub backgroundColor: FnWithArgsOrAny,
     #[serde(
         skip_serializing_if = "Vec::is_empty",
         default,
@@ -421,7 +426,7 @@ pub struct XYDataset {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub hoverBorderWidth: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub indexAxis: String,
+    pub axis: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub inflateAmount: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
@@ -482,8 +487,8 @@ pub(crate) struct XYPoint {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub y: NumberString,
 
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub description: String,
+    #[serde(skip_serializing_if = "serde_json::Value::is_null", default)]
+    pub description: serde_json::Value,
 }
 impl PartialOrd for XYPoint {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -496,8 +501,8 @@ impl Ord for XYPoint {
     }
 }
 
-impl From<(NumberOrDateString, NumberString, Option<String>)> for XYPoint {
-    fn from((x, y, d): (NumberOrDateString, NumberString, Option<String>)) -> Self {
+impl From<(NumberOrDateString, NumberString, Option<Value>)> for XYPoint {
+    fn from((x, y, d): (NumberOrDateString, NumberString, Option<Value>)) -> Self {
         XYPoint {
             x,
             y,
@@ -514,6 +519,8 @@ pub struct ChartOptions<A: Annotation> {
     pub elements: Option<ChartElements>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub interaction: Option<ChartInteraction>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub indexAxis: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub legend: Option<ChartLegend>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -528,8 +535,6 @@ pub struct ChartOptions<A: Annotation> {
     pub scales: Option<HashMap<String, ChartScale>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub spanGaps: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tooltips: Option<ChartTooltips>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -549,7 +554,7 @@ pub struct ChartPlugins<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<Title>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tooltip: Option<TooltipPlugins>,
+    pub tooltip: Option<TooltipPlugin>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -577,7 +582,7 @@ pub struct AutoColors {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TooltipPlugins {
+pub struct TooltipPlugin {
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub backgroundColor: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
@@ -586,6 +591,9 @@ pub struct TooltipPlugins {
     pub bodyColor: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub callbacks: Option<TooltipCallbacks>,
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub filter: FnWithArgs,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub displayColors: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -876,12 +884,6 @@ pub struct ChartInteraction {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ChartTooltips {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub position: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChartLegend {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<bool>,
@@ -974,9 +976,8 @@ pub struct DataLabels {
     pub clip: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub color: String,
-    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub display: FnWithArgsOrAny,
+    #[serde(skip_serializing_if = "BoolString::is_empty", default)]
+    pub display: BoolString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub drawTime: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]

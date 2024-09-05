@@ -1,5 +1,6 @@
 use crate::types::*;
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::*;
 
 pub trait DatasetTrait: Serialize {}
@@ -10,7 +11,7 @@ pub trait DatasetDataExt {
 
 impl<I> DatasetDataExt for I
 where
-    I: Iterator<Item = (NumberOrDateString, NumberString, Option<String>)>,
+    I: Iterator<Item = (NumberOrDateString, NumberString, Option<Value>)>,
 {
     fn presorted_to_dataset_data(self) -> DatasetData {
         DatasetData(serde_json::to_value(self.map(XYPoint::from).collect::<Vec<_>>()).unwrap())
@@ -23,7 +24,7 @@ where
 pub trait DatasetIterExt: Iterator {
     fn into_data_iter<X, Y>(
         self,
-    ) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<String>)>
+    ) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<Value>)>
     where
         Self: Iterator<Item = (X, Y)> + Sized,
         X: Into<NumberOrDateString>,
@@ -33,14 +34,14 @@ pub trait DatasetIterExt: Iterator {
     }
     fn into_data_iter_with_description<X, Y, D>(
         self,
-    ) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<String>)>
+    ) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<Value>)>
     where
         Self: Iterator<Item = (X, Y, D)> + Sized,
         X: Into<NumberOrDateString>,
         Y: Into<NumberString>,
-        D: Into<String>,
+        D: Serialize,
     {
-        self.map(|(x, y, d)| (x.into(), y.into(), Some(d.into())))
+        self.map(|(x, y, d)| (x.into(), y.into(), Some(serde_json::to_value(d).unwrap())))
     }
 }
 impl<T> DatasetIterExt for T where T: Iterator + ?Sized {}

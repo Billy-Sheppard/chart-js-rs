@@ -4,7 +4,22 @@ use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 
 use crate::{exports::*, FnWithArgsOrAny};
 
-fn rationalise(obj: &JsValue, name: (&'static str, &'static str)) {
+fn rationalise_1(obj: &JsValue, name: &'static str) {
+    if let Ok(a) = Reflect::get(obj, &name.into()) {
+        // If the property is undefined, dont try serialize it
+        if a == JsValue::UNDEFINED {
+            return;
+        }
+
+        match serde_wasm_bindgen::from_value::<FnWithArgsOrAny>(a).unwrap() {
+            FnWithArgsOrAny::Any(_) => (),
+            FnWithArgsOrAny::FnWithArgs(fnwa) => {
+                Reflect::set(obj, &name.into(), &fnwa.build()).unwrap();
+            }
+        }
+    }
+}
+fn rationalise_2(obj: &JsValue, name: (&'static str, &'static str)) {
     if let Ok(a) = Reflect::get(obj, &name.0.into()) {
         // If the property is undefined, dont try serialize it
         if a == JsValue::UNDEFINED {
@@ -115,14 +130,14 @@ impl Chart {
         Array::from(&get_path(&self.obj, "data.datasets").unwrap())
             .iter()
             .for_each(|dataset| {
-                rationalise(&dataset, ("segment", "borderDash"));
-                rationalise(&dataset, ("segment", "borderColor"));
-                rationalise(&dataset, ("datalabels", "align"));
-                rationalise(&dataset, ("datalabels", "anchor"));
-                rationalise(&dataset, ("datalabels", "backgroundColor"));
-                rationalise(&dataset, ("datalabels", "display"));
-                rationalise(&dataset, ("datalabels", "formatter"));
-                rationalise(&dataset, ("datalabels", "offset"));
+                rationalise_1(&dataset, "backgroundColor");
+                rationalise_2(&dataset, ("segment", "borderDash"));
+                rationalise_2(&dataset, ("segment", "borderColor"));
+                rationalise_2(&dataset, ("datalabels", "align"));
+                rationalise_2(&dataset, ("datalabels", "anchor"));
+                rationalise_2(&dataset, ("datalabels", "backgroundColor"));
+                rationalise_2(&dataset, ("datalabels", "formatter"));
+                rationalise_2(&dataset, ("datalabels", "offset"));
             });
 
         // Handle options.scales
@@ -130,19 +145,20 @@ impl Chart {
             Object::values(&scales.dyn_into().unwrap())
                 .iter()
                 .for_each(|scale| {
-                    rationalise(&scale, ("ticks", "callback"));
+                    rationalise_2(&scale, ("ticks", "callback"));
                 });
         }
 
         // Handle options.plugins.legend
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.legend") {
-            rationalise(&legend, ("labels", "filter"));
+            rationalise_2(&legend, ("labels", "filter"));
         }
 
         // Handle options.plugins.tooltip
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.tooltip") {
-            rationalise(&legend, ("callbacks", "label"));
-            rationalise(&legend, ("callbacks", "title"));
+            rationalise_1(&legend, "filter");
+            rationalise_2(&legend, ("callbacks", "label"));
+            rationalise_2(&legend, ("callbacks", "title"));
         }
     }
 }
