@@ -156,11 +156,17 @@ impl<'de> Deserialize<'de> for NumberOrDateString {
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BoolString(String);
 impl BoolString {
-    pub fn true_() -> Option<BoolString> {
+    pub fn opt_true() -> Option<BoolString> {
         BoolString("true".into()).into()
     }
-    pub fn false_() -> Option<BoolString> {
+    pub fn opt_false() -> Option<BoolString> {
         BoolString("false".into()).into()
+    }
+    pub fn _true() -> BoolString {
+        BoolString("true".into())
+    }
+    pub fn _false() -> BoolString {
+        BoolString("false".into())
     }
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -976,7 +982,7 @@ pub struct DataLabels {
     pub clip: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub color: String,
-    #[serde(skip_serializing_if = "BoolString::is_empty", default)]
+    #[serde(default = "BoolString::_false")]
     pub display: BoolString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub drawTime: NumberString,
