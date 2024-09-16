@@ -403,8 +403,8 @@ pub struct XYDataset {
     pub borderRadius: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub borderSkipped: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub borderWidth: Option<Border>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub category_label: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -1000,6 +1000,28 @@ pub struct DataLabels {
     pub padding: Option<Padding>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub z: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Border {
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub bottom: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub left: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub right: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub top: NumberString,
+}
+impl From<i32> for Border {
+    fn from(value: i32) -> Self {
+        Border {
+            bottom: value.into(),
+            left: value.into(),
+            right: value.into(),
+            top: value.into(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]

@@ -236,7 +236,7 @@ impl Model {
 
                     backgroundColor: "palegreen".into(),
                     borderColor: "green".into(),
-                    borderWidth: 2.into(),
+                    borderWidth: Some(2.into()),
                     label: "Dataset 1".into(),
                     yAxisID: "y".into(),
                     ..Default::default() // always use `..Default::default()` to make sure this works in the future

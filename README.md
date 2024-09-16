@@ -22,6 +22,8 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 ### Rust:
 ```rust
+    use chart_js_rs::ChartExt;
+
     let id = "[YOUR CHART ID HERE]";
     let chart = chart_js_rs::scatter::Scatter {
         id: id.to_string(),
@@ -30,15 +32,15 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
         ..Default::default()
     };
     // to use any JS callbacks or functions you use render_mutate and refer to the JS below
-    chart.to_chart().mutate().render();
+    chart.into_chart().mutate().render();
 
     // to use any chart-js plugins, a few examples
-    chart.to_chart().plugins("[window['chartjs-plugin-autocolors']]").render(); // for autocolors and no mutating
-    chart.to_chart().mutate().plugins("[window['chartjs-plugin-autocolors']]").render(); // for autocolors and mutating
-    chart.to_chart().mutate().plugins("[ChartDataLabels, window['chartjs-plugin-autocolors']]").render(); // for datalabels, autocolors, and mutating
+    chart.into_chart().plugins("[window['chartjs-plugin-autocolors']]").render(); // for autocolors and no mutating
+    chart.into_chart().mutate().plugins("[window['chartjs-plugin-autocolors']]").render(); // for autocolors and mutating
+    chart.into_chart().mutate().plugins("[ChartDataLabels, window['chartjs-plugin-autocolors']]").render(); // for datalabels, autocolors, and mutating
 
     // else use render
-    chart.to_chart().render();
+    chart.into_chart().render();
 ```
 
 ### Your html file:

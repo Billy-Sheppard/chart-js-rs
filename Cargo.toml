@@ -1,6 +1,6 @@
 [package]
 name = "chart-js-rs"
-version = "0.0.36"
+version = "0.0.37"
 edition = "2021"
 authors = ["Billy Sheppard", "Luis Moreno"]
 license = "Apache-2.0"
