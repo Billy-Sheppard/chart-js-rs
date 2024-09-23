@@ -37,9 +37,8 @@ pub trait ChartExt: DeserializeOwned + Serialize {
     fn get_chart_from_id(id: &str) -> Option<Self> {
         let chart = get_chart(id);
         serde_wasm_bindgen::from_value(chart)
-            .map_err(|e| {
+            .inspect_err(|e| {
                 gloo_console::error!("{}", e.to_string());
-                e
             })
             .ok()
     }

@@ -1,3 +1,5 @@
+use serde::de::DeserializeOwned;
+
 use {
     crate::{traits::*, utils::FnWithArgs},
     serde::{de, Deserialize, Serialize},
@@ -295,6 +297,42 @@ impl<'de> Deserialize<'de> for NumberString {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(untagged)]
+pub enum NumberStringOrT<T: Serialize + DeserializeOwned> {
+    T(T),
+    NumberString(NumberString),
+}
+impl<'de, T: Serialize + DeserializeOwned> Deserialize<'de> for NumberStringOrT<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        // thanks serde :|
+        let value = serde::__private::de::Content::deserialize(deserializer)?;
+        let deserializer = serde::__private::de::ContentRefDeserializer::<D::Error>::new(&value);
+
+        match NumberString::deserialize(deserializer) {
+            Ok(ns) => Ok(Self::NumberString(ns)),
+            Err(_) => T::deserialize(deserializer).map(Self::T),
+        }
+    }
+}
+impl<T: Serialize + DeserializeOwned> NumberStringOrT<T> {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            NumberStringOrT::T(_t) => false,
+            NumberStringOrT::NumberString(ns) => ns.is_empty(),
+        }
+    }
+}
+
+impl<T: Serialize + Display, U: Serialize + DeserializeOwned> From<T> for NumberStringOrT<U> {
+    fn from(value: T) -> Self {
+        serde_json::from_value(serde_json::to_value(value).unwrap()).unwrap()
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SinglePointDataset {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
@@ -404,7 +442,7 @@ pub struct XYDataset {
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub borderSkipped: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub borderWidth: Option<Border>,
+    pub borderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub category_label: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -1013,17 +1051,6 @@ pub struct Border {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub top: NumberString,
 }
-impl From<i32> for Border {
-    fn from(value: i32) -> Self {
-        Border {
-            bottom: value.into(),
-            left: value.into(),
-            right: value.into(),
-            top: value.into(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Padding {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
