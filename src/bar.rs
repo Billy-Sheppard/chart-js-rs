@@ -3,7 +3,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::{traits::*, types::*, ChartExt};
+use crate::{objects::*, traits::*, ChartExt};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Bar<A: Annotation> {

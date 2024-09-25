@@ -24,3 +24,10 @@ js-sys = "0.3.64"
 
 [workspace]
 members = ["examples"]
+
+[build-dependencies]
+heck = "*"
+itertools = "*"
+quote = "*"
+proc-macro2 = "*"
+syn = { features = ["parsing", "full"], version = "*" }

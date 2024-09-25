@@ -5,19 +5,19 @@ pub mod bar;
 pub mod doughnut;
 pub mod exports;
 pub mod functions;
+pub mod objects;
 pub mod pie;
 pub mod scatter;
 pub mod traits;
-pub mod types;
 
 #[doc(hidden)]
 mod utils;
 
 use exports::get_chart;
 use gloo_utils::format::JsValueSerdeExt;
+pub use objects::*;
 use serde::{de::DeserializeOwned, Serialize};
 pub use traits::*;
-pub use types::*;
 pub use utils::*;
 
 pub trait ChartExt: DeserializeOwned + Serialize {
@@ -36,9 +36,10 @@ pub trait ChartExt: DeserializeOwned + Serialize {
 
     fn get_chart_from_id(id: &str) -> Option<Self> {
         let chart = get_chart(id);
+
         serde_wasm_bindgen::from_value(chart)
             .inspect_err(|e| {
-                gloo_console::error!("{}", e.to_string());
+                gloo_console::error!(e.to_string());
             })
             .ok()
     }

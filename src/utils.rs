@@ -11,10 +11,12 @@ fn rationalise_1(obj: &JsValue, name: &'static str) {
             return;
         }
 
-        match serde_wasm_bindgen::from_value::<FnWithArgsOrAny>(a).unwrap() {
-            FnWithArgsOrAny::Any(_) => (),
-            FnWithArgsOrAny::FnWithArgs(fnwa) => {
-                Reflect::set(obj, &name.into(), &fnwa.build()).unwrap();
+        if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrAny>(a) {
+            match o {
+                FnWithArgsOrAny::Any(_) => (),
+                FnWithArgsOrAny::FnWithArgs(fnwa) => {
+                    let _ = Reflect::set(obj, &name.into(), &fnwa.build());
+                }
             }
         }
     }
@@ -32,10 +34,12 @@ fn rationalise_2(obj: &JsValue, name: (&'static str, &'static str)) {
                 return;
             }
 
-            match serde_wasm_bindgen::from_value::<FnWithArgsOrAny>(b).unwrap() {
-                FnWithArgsOrAny::Any(_) => (),
-                FnWithArgsOrAny::FnWithArgs(fnwa) => {
-                    Reflect::set(&a, &name.1.into(), &fnwa.build()).unwrap();
+            if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrAny>(b) {
+                match o {
+                    FnWithArgsOrAny::Any(_) => (),
+                    FnWithArgsOrAny::FnWithArgs(fnwa) => {
+                        let _ = Reflect::set(&a, &name.1.into(), &fnwa.build());
+                    }
                 }
             }
         }

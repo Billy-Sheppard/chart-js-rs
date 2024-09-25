@@ -1,550 +1,711 @@
-use serde::de::DeserializeOwned;
-
 use {
-    crate::{traits::*, utils::FnWithArgs},
+    crate::{objects::helper_objects::*, traits::*, utils::FnWithArgs},
     serde::{de, Deserialize, Serialize},
     serde_json::Value,
-    std::{
-        collections::HashMap,
-        fmt::{Debug, Display},
-    },
+    std::{collections::HashMap, fmt::Debug},
 };
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-#[serde(transparent)]
-pub struct DatasetData(pub(crate) serde_json::Value);
-impl DatasetData {
-    fn is_empty(&self) -> bool {
-        serde_json::to_value(self)
-            .unwrap()
-            .as_array()
-            .unwrap()
-            .is_empty()
-    }
-
-    pub fn from_single_point_array(iter: impl Iterator<Item = [NumberOrDateString; 1]>) -> Self {
-        DatasetData(serde_json::to_value(iter.collect::<Vec<_>>()).unwrap())
-    }
-
-    pub fn from_minmax_array(iter: impl Iterator<Item = [NumberOrDateString; 2]>) -> Self {
-        DatasetData(serde_json::to_value(iter.collect::<Vec<_>>()).unwrap())
-    }
-}
-impl PartialOrd for DatasetData {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for DatasetData {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.0.to_string().cmp(&other.0.to_string())
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-pub struct NoDatasets {}
-impl DatasetTrait for NoDatasets {}
-#[derive(Debug, Deserialize, Serialize, Default)]
-pub struct NoAnnotations {}
-impl Annotation for NoAnnotations {}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Dataset<D: DatasetTrait> {
-    pub datasets: D,
-    pub labels: Option<Vec<NumberOrDateString>>,
-}
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Any {
-    String(String),
-    Int(isize),
-    Bool(bool),
-    Vec(Vec<()>),
-}
-impl From<bool> for Any {
-    fn from(value: bool) -> Self {
-        Self::Bool(value)
-    }
-}
-impl From<String> for Any {
-    fn from(value: String) -> Self {
-        Self::String(value)
-    }
-}
-impl Any {
-    pub fn is_empty(&self) -> bool {
-        match self {
-            Any::String(s) => s.is_empty(),
-            Any::Int(_i) => false,
-            Any::Bool(_b) => false,
-            Any::Vec(v) => v.is_empty(),
-        }
-    }
-}
-impl Display for Any {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Any::String(s) => write!(f, "{s}"),
-            Any::Bool(b) => write!(f, "{b}"),
-            Any::Int(i) => write!(f, "{i}"),
-            Any::Vec(_) => write!(f, ""),
-        }
-    }
-}
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct NumberOrDateString(String);
-impl From<NumberString> for NumberOrDateString {
-    fn from(value: NumberString) -> Self {
-        value.0.into()
-    }
-}
-impl NumberOrDateString {
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-impl PartialOrd for NumberOrDateString {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for NumberOrDateString {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if let Some((s, o)) = self
-            .0
-            .parse::<rust_decimal::Decimal>()
-            .ok()
-            .zip(other.0.parse::<rust_decimal::Decimal>().ok())
-        {
-            s.cmp(&o)
-        } else {
-            self.0.cmp(&other.0)
-        }
-    }
-}
-impl<T: Display> From<T> for NumberOrDateString {
-    fn from(s: T) -> Self {
-        Self(s.to_string())
-    }
-}
-#[allow(unknown_lints, clippy::to_string_trait_impl)]
-impl ToString for NumberOrDateString {
-    fn to_string(&self) -> String {
-        self.0.to_string()
-    }
-}
-impl Serialize for NumberOrDateString {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let fnum: Result<f64, _> = self.0.parse();
-        let inum: Result<i64, _> = self.0.parse();
-        match (fnum, inum) {
-            (Ok(_), Ok(inum)) => serializer.serialize_i64(inum),
-            (Ok(fnum), _) => serializer.serialize_f64(fnum),
-            _ => serializer.serialize_str(&self.0),
-        }
-    }
-}
-impl<'de> Deserialize<'de> for NumberOrDateString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Any::deserialize(deserializer).map(|soi| Self(soi.to_string()))
-    }
-}
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BoolString(String);
-impl BoolString {
-    pub fn opt_true() -> Option<BoolString> {
-        BoolString("true".into()).into()
-    }
-    pub fn opt_false() -> Option<BoolString> {
-        BoolString("false".into()).into()
-    }
-    pub fn _true() -> BoolString {
-        BoolString("true".into())
-    }
-    pub fn _false() -> BoolString {
-        BoolString("false".into())
-    }
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-impl<T: Display> From<T> for BoolString {
-    fn from(s: T) -> Self {
-        Self(s.to_string())
-    }
-}
-impl Serialize for BoolString {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let bool_: Result<bool, _> = self.0.parse();
-        let any: Result<String, _> = self.0.parse();
-        match (bool_, any) {
-            (Ok(bool_), _) => serializer.serialize_bool(bool_),
-            (_, Ok(any)) => serializer.serialize_str(&any),
-            _ => unreachable!(),
-        }
-    }
-}
-impl<'de> Deserialize<'de> for BoolString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Any::deserialize(deserializer).map(|soi| Self(soi.to_string()))
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum FnWithArgsOrAny {
-    Any(Any),
-    FnWithArgs(FnWithArgs),
-}
-impl FnWithArgsOrAny {
-    fn is_empty(&self) -> bool {
-        match self {
-            FnWithArgsOrAny::Any(a) => a.is_empty(),
-            FnWithArgsOrAny::FnWithArgs(fnwa) => fnwa.is_empty(),
-        }
-    }
-}
-impl Default for FnWithArgsOrAny {
-    fn default() -> Self {
-        FnWithArgsOrAny::Any(Any::from(false))
-    }
-}
-impl<T: Display> From<T> for FnWithArgsOrAny {
-    fn from(s: T) -> Self {
-        Self::Any(s.to_string().into())
-    }
-}
-impl From<FnWithArgs> for FnWithArgsOrAny {
-    fn from(value: FnWithArgs) -> Self {
-        Self::FnWithArgs(value)
-    }
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct NumberString(String);
-impl From<NumberOrDateString> for NumberString {
-    fn from(value: NumberOrDateString) -> Self {
-        value.0.into()
-    }
-}
-impl NumberString {
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-impl PartialOrd for NumberString {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for NumberString {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if let Some((s, o)) = self
-            .0
-            .parse::<rust_decimal::Decimal>()
-            .ok()
-            .zip(other.0.parse::<rust_decimal::Decimal>().ok())
-        {
-            s.cmp(&o)
-        } else {
-            self.0.cmp(&other.0)
-        }
-    }
-}
-impl<T: Display> From<T> for NumberString {
-    fn from(s: T) -> Self {
-        Self(s.to_string())
-    }
-}
-#[allow(unknown_lints, clippy::to_string_trait_impl)]
-impl ToString for NumberString {
-    fn to_string(&self) -> String {
-        self.0.to_string()
-    }
-}
-impl Serialize for NumberString {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let fnum: Result<f64, _> = self.0.parse();
-        let inum: Result<i64, _> = self.0.parse();
-        match (fnum, inum) {
-            (Ok(_), Ok(inum)) => serializer.serialize_i64(inum),
-            (Ok(fnum), _) => serializer.serialize_f64(fnum),
-            _ => serializer.serialize_str(&self.0),
-        }
-    }
-}
-impl<'de> Deserialize<'de> for NumberString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Any::deserialize(deserializer).map(|soi| Self(soi.to_string()))
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-#[serde(untagged)]
-pub enum NumberStringOrT<T: Serialize + DeserializeOwned> {
-    T(T),
-    NumberString(NumberString),
-}
-impl<'de, T: Serialize + DeserializeOwned> Deserialize<'de> for NumberStringOrT<T> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        // thanks serde :|
-        let value = serde::__private::de::Content::deserialize(deserializer)?;
-        let deserializer = serde::__private::de::ContentRefDeserializer::<D::Error>::new(&value);
-
-        match NumberString::deserialize(deserializer) {
-            Ok(ns) => Ok(Self::NumberString(ns)),
-            Err(_) => T::deserialize(deserializer).map(Self::T),
-        }
-    }
-}
-impl<T: Serialize + DeserializeOwned> NumberStringOrT<T> {
-    pub fn is_empty(&self) -> bool {
-        match self {
-            NumberStringOrT::T(_t) => false,
-            NumberStringOrT::NumberString(ns) => ns.is_empty(),
-        }
-    }
-}
-
-impl<T: Serialize + Display, U: Serialize + DeserializeOwned> From<T> for NumberStringOrT<U> {
-    fn from(value: T) -> Self {
-        serde_json::from_value(serde_json::to_value(value).unwrap()).unwrap()
-    }
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SinglePointDataset {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub backgroundColor: Vec<String>,
+    pub(crate) backgroundColor: Vec<String>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub barPercentage: NumberString,
+    pub(crate) barPercentage: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub barThickness: NumberString,
+    pub(crate) barThickness: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub base: NumberString,
+    pub(crate) base: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub borderColor: String,
+    pub(crate) borderColor: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub borderJoinStyle: String,
+    pub(crate) borderJoinStyle: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderRadius: NumberString,
+    pub(crate) borderRadius: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub borderSkipped: String,
+    pub(crate) borderSkipped: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderWidth: NumberString,
+    pub(crate) borderWidth: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub categoryPercentage: NumberString,
+    pub(crate) categoryPercentage: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub clip: NumberString,
+    pub(crate) clip: NumberString,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub data: Vec<NumberString>,
+    pub(crate) data: Vec<NumberString>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub datalabels: Option<DataLabels>,
+    pub(crate) datalabels: Option<DataLabels>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub grouped: Option<bool>,
+    pub(crate) grouped: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub hoverBackgroundColor: String,
+    pub(crate) hoverBackgroundColor: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub hoverBorderColor: String,
+    pub(crate) hoverBorderColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub hoverBorderRadius: NumberString,
+    pub(crate) hoverBorderRadius: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub hoverBorderWidth: NumberString,
+    pub(crate) hoverBorderWidth: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub indexAxis: String,
+    pub(crate) indexAxis: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub inflateAmount: NumberString,
+    pub(crate) inflateAmount: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub label: String,
+    pub(crate) label: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub maxBarThickness: NumberString,
+    pub(crate) maxBarThickness: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub minBarLength: NumberString,
+    pub(crate) minBarLength: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub order: NumberString,
+    pub(crate) order: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub pointBackgroundColor: String,
+    pub(crate) pointBackgroundColor: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub pointBorderColor: String,
+    pub(crate) pointBorderColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub pointBorderWidth: NumberString,
+    pub(crate) pointBorderWidth: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub pointHoverBackgroundColor: String,
+    pub(crate) pointHoverBackgroundColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub pointHoverBorderWidth: NumberString,
+    pub(crate) pointHoverBorderWidth: NumberString,
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub pointHoverRadius: NumberOrDateString,
+    pub(crate) pointHoverRadius: NumberOrDateString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub pointRadius: NumberString,
+    pub(crate) pointRadius: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub pointStyle: String,
+    pub(crate) pointStyle: String,
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub r#type: String,
+    pub(crate) r#type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub skipNull: Option<bool>,
+    pub(crate) skipNull: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub stack: String,
+    pub(crate) stack: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub stepped: Option<bool>,
+    pub(crate) stepped: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub xAxisID: String,
+    pub(crate) xAxisID: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub yAxisID: String,
+    pub(crate) yAxisID: String,
 }
-impl DatasetTrait for Vec<SinglePointDataset> {}
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct XYDataset {
     #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub backgroundColor: FnWithArgsOrAny,
+    pub(crate) backgroundColor: FnWithArgsOrAny,
     #[serde(
         skip_serializing_if = "Vec::is_empty",
         default,
-        rename = "backgroundColor"
+        rename(serialize = "backgroundColor")
     )]
-    pub backgroundColorArray: Vec<String>,
+    pub(crate) backgroundColorArray: Vec<String>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub barPercentage: NumberString,
+    pub(crate) barPercentage: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub barThickness: NumberString,
+    pub(crate) barThickness: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub base: NumberString,
+    pub(crate) base: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub borderColor: String,
+    pub(crate) borderColor: String,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub borderDash: Vec<NumberString>,
+    pub(crate) borderDash: Vec<NumberString>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub borderJoinStyle: String,
+    pub(crate) borderJoinStyle: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderRadius: NumberString,
+    pub(crate) borderRadius: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub borderSkipped: String,
+    pub(crate) borderSkipped: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub borderWidth: Option<NumberStringOrT<Border>>,
+    pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub category_label: String,
+    pub(crate) category_label: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub categoryPercentage: NumberString,
+    pub(crate) categoryPercentage: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub clip: NumberString,
+    pub(crate) clip: NumberString,
     #[serde(skip_serializing_if = "DatasetData::is_empty", default)]
-    pub data: DatasetData,
+    pub(crate) data: DatasetData,
     /// Use Default::default() if this isn't required
-    pub datalabels: DataLabels,
+    pub(crate) datalabels: DataLabels,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub description: String,
+    pub(crate) description: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub fill: String,
+    pub(crate) fill: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub grouped: Option<bool>,
+    pub(crate) grouped: Option<bool>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub hitRadius: NumberString,
+    pub(crate) hitRadius: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub hoverBackgroundColor: String,
+    pub(crate) hoverBackgroundColor: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub hoverBorderColor: String,
+    pub(crate) hoverBorderColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub hoverBorderRadius: NumberString,
+    pub(crate) hoverBorderRadius: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub hoverBorderWidth: NumberString,
+    pub(crate) hoverBorderWidth: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub axis: String,
+    pub(crate) axis: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub inflateAmount: NumberString,
+    pub(crate) inflateAmount: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub label: String,
+    pub(crate) label: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub maxBarThickness: NumberString,
+    pub(crate) maxBarThickness: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub minBarLength: NumberString,
+    pub(crate) minBarLength: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub order: NumberString,
+    pub(crate) order: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub pointBackgroundColor: String,
+    pub(crate) pointBackgroundColor: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub pointBorderColor: String,
+    pub(crate) pointBorderColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub pointBorderWidth: NumberString,
+    pub(crate) pointBorderWidth: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub pointHitRadius: NumberString,
+    pub(crate) pointHitRadius: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub pointHoverBackgroundColor: String,
+    pub(crate) pointHoverBackgroundColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub pointHoverBorderWidth: NumberString,
+    pub(crate) pointHoverBorderWidth: NumberString,
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub pointHoverRadius: NumberOrDateString,
+    pub(crate) pointHoverRadius: NumberOrDateString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub pointRadius: NumberString,
+    pub(crate) pointRadius: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub pointStyle: String,
+    pub(crate) pointStyle: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub segment: Option<Segment>,
+    pub(crate) segment: Option<Segment>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub skipNull: Option<bool>,
+    pub(crate) skipNull: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub spanGaps: Option<bool>,
+    pub(crate) spanGaps: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub stack: String,
+    pub(crate) stack: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub stepped: Option<BoolString>,
+    pub(crate) stepped: Option<BoolString>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub tension: NumberString,
+    pub(crate) tension: NumberString,
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub r#type: String,
+    pub(crate) r#type: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub xAxisID: String,
+    pub(crate) xAxisID: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub yAxisID: String,
+    pub(crate) yAxisID: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub z: NumberString,
+    pub(crate) z: NumberString,
 }
-impl DatasetTrait for Vec<XYDataset> {}
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub(crate) struct XYPoint {
+pub struct XYPoint {
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub x: NumberOrDateString,
+    pub(crate) x: NumberOrDateString,
 
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub y: NumberString,
+    pub(crate) y: NumberString,
 
     #[serde(skip_serializing_if = "serde_json::Value::is_null", default)]
-    pub description: serde_json::Value,
-}
-impl PartialOrd for XYPoint {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for XYPoint {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.x.cmp(&other.x)
-    }
+    pub(crate) description: serde_json::Value,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+pub struct ChartOptions<A: Annotation> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) animation: Option<Animation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) elements: Option<ChartElements>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) interaction: Option<ChartInteraction>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) indexAxis: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) legend: Option<ChartLegend>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) layout: Option<ChartLayout>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) maintainAspectRatio: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) plugins: Option<ChartPlugins<A>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) responsive: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) scales: Option<HashMap<String, ChartScale>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) spanGaps: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Animation {
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) duration: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+pub struct ChartPlugins<A: Annotation> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) annotation: Option<Annotations<A>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) autocolors: Option<AutoColors>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) legend: Option<PluginLegend>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) title: Option<Title>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) tooltip: Option<TooltipPlugin>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PluginLegend {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) display: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) labels: Option<LegendLabel>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) position: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) reverse: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+pub struct Annotations<A: Annotation> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) annotations: Option<HashMap<String, A>>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct AutoColors {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) mode: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TooltipPlugin {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) backgroundColor: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) bodyAlign: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) bodyColor: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) callbacks: Option<TooltipCallbacks>,
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) filter: FnWithArgs,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) displayColors: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) enabled: Option<bool>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) titleAlign: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) titleColor: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) titleMarginBottom: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ChartLayout {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) padding: Option<Padding>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TooltipCallbacks {
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) label: FnWithArgs,
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) title: FnWithArgs,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ChartScale {
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) afterBuildTicks: FnWithArgs,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) alignToPixels: Option<bool>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) backgroundColor: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) barPercentage: NumberString,
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) beforeFit: FnWithArgs,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) beginAtZero: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) border: Option<ScaleBorder>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) bounds: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) categoryPercentage: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) display: Option<bool>,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) grace: NumberOrDateString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) grid: Option<Grid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) grouped: Option<bool>,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) max: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) min: NumberOrDateString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) offset: Option<bool>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) position: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) reverse: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) stacked: Option<bool>,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) suggestedMax: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) suggestedMin: NumberOrDateString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) ticks: Option<ScaleTicks>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) time: Option<ScaleTime>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) title: Option<Title>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    #[serde(rename = "type")]
+    pub(crate) r#type: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) weight: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ScaleBorder {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) color: String,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) dash: Vec<NumberString>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) dashOffset: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) display: Option<bool>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) width: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) z: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Grid {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) color: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) display: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) drawOnChartArea: Option<bool>,
+    #[serde(skip_serializing_if = "String::is_empty", default, skip_deserializing)]
+    // the skip_deserializing needed because chartjs sets a default with a different type, FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) tickColor: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) z: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LineAnnotation {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) borderColor: String,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) borderDash: Vec<NumberString>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) drawTime: String,
+    #[serde(default, rename = "type")]
+    pub(crate) r#type: LineAnnotationType,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) xMax: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) xMin: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) yMax: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) yMin: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) yScaleID: NumberString,
+}
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LineAnnotationType;
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BoxAnnotation {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) backgroundColor: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) borderColor: String,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) borderDash: Vec<NumberString>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) drawTime: String,
+    #[serde(default, rename = "type")]
+    pub(crate) r#type: BoxAnnotationType,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) xMax: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) xMin: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) yMax: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) yMin: NumberString,
+}
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BoxAnnotationType;
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ScaleTime {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) displayFormats: Option<DisplayFormats>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) unit: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DisplayFormats {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) day: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) hour: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) minute: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) month: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) quarter: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) week: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) year: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ScaleTicks {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) autoSkip: Option<bool>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) align: String,
+    #[serde(
+        skip_serializing_if = "FnWithArgs::is_empty",
+        default,
+        skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    )]
+    pub(crate) callback: FnWithArgs,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) count: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) font: Option<Font>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) includeBounds: Option<bool>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) maxTicksLimit: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
+    // the skip_deserializing needed because chartjs sets a default with a different type, FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) padding: Option<Padding>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) precision: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) stepSize: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Title {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) display: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) font: Option<Font>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) text: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ChartInteraction {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) axis: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) intersect: Option<bool>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) mode: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ChartLegend {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) display: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) labels: Option<LegendLabel>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) position: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LegendLabel {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) boxHeight: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) boxWidth: Option<usize>,
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) filter: FnWithArgs,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) font: Option<Font>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) pointStyle: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) pointStyleWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) useBorderRadius: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) usePointStyle: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ChartElements {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) bar: Option<BarElementConfiguration>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) line: Option<LineElementConfiguration>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) point: Option<PointElementConfiguration>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BarElementConfiguration {
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) borderRadius: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) fill: Option<bool>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) hoverBorderWidth: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LineElementConfiguration {
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) cubicInterpolationMode: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) fill: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PointElementConfiguration {
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) hitRadius: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) hoverBorderWidth: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) hoverRadius: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) radius: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DataLabels {
+    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    pub(crate) align: FnWithArgsOrAny,
+    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    pub(crate) anchor: FnWithArgsOrAny,
+    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    pub(crate) backgroundColor: FnWithArgsOrAny,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) borderRadius: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) clamp: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) clip: Option<bool>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) color: String,
+    #[serde(default = "BoolString::_false")]
+    pub(crate) display: BoolString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) drawTime: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) font: Option<Font>,
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) formatter: FnWithArgs,
+    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) offset: FnWithArgsOrAny,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) opacity: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) padding: Option<Padding>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) z: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Border {
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) bottom: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) left: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) right: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) top: NumberString,
+}
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Padding {
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) bottom: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) left: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) right: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) top: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Font {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) family: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) lineHeight: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) size: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) style: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) weight: NumberString,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Segment {
+    #[serde(
+        skip_serializing_if = "FnWithArgs::is_empty",
+        default,
+        skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    )]
+    pub(crate) borderColor: FnWithArgs,
+    #[serde(
+        skip_serializing_if = "FnWithArgs::is_empty",
+        default,
+        skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    )]
+    pub(crate) borderDash: FnWithArgs,
+}
+
+//
+impl DatasetTrait for Vec<SinglePointDataset> {}
+impl DatasetTrait for Vec<XYDataset> {}
+//
+impl Annotation for BoxAnnotation {}
+impl Annotation for LineAnnotation {}
+//
 impl From<(NumberOrDateString, NumberString, Option<Value>)> for XYPoint {
     fn from((x, y, d): (NumberOrDateString, NumberString, Option<Value>)) -> Self {
         XYPoint {
@@ -554,247 +715,28 @@ impl From<(NumberOrDateString, NumberString, Option<Value>)> for XYPoint {
         }
     }
 }
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct ChartOptions<A: Annotation> {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub animation: Option<Animation>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub elements: Option<ChartElements>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub interaction: Option<ChartInteraction>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub indexAxis: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub legend: Option<ChartLegend>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub layout: Option<ChartLayout>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub maintainAspectRatio: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub plugins: Option<ChartPlugins<A>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub responsive: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scales: Option<HashMap<String, ChartScale>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub spanGaps: Option<bool>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Animation {
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub duration: NumberString,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct ChartPlugins<A: Annotation> {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub annotation: Option<Annotations<A>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub autocolors: Option<AutoColors>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub legend: Option<PluginLegend>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<Title>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tooltip: Option<TooltipPlugin>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PluginLegend {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub labels: Option<LegendLabel>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub position: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reverse: Option<bool>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct Annotations<A: Annotation> {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub annotations: Option<HashMap<String, A>>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct AutoColors {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub mode: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TooltipPlugin {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub backgroundColor: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub bodyAlign: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub bodyColor: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub callbacks: Option<TooltipCallbacks>,
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
-    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub filter: FnWithArgs,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub displayColors: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub enabled: Option<bool>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub titleAlign: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub titleColor: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub titleMarginBottom: NumberString,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ChartLayout {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub padding: Option<Padding>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TooltipCallbacks {
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
-    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub label: FnWithArgs,
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
-    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub title: FnWithArgs,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ChartScale {
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
-    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub afterBuildTicks: FnWithArgs,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub alignToPixels: Option<bool>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub backgroundColour: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub barPercentage: NumberString,
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
-    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub beforeFit: FnWithArgs,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub beginAtZero: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub border: Option<ScaleBorder>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub bounds: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub categoryPercentage: NumberString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display: Option<bool>,
-    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub grace: NumberOrDateString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub grid: Option<Grid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub grouped: Option<bool>,
-    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub max: NumberOrDateString,
-    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub min: NumberOrDateString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub offset: Option<bool>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub position: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reverse: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stacked: Option<bool>,
-    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub suggestedMax: NumberOrDateString,
-    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub suggestedMin: NumberOrDateString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ticks: Option<ScaleTicks>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub time: Option<ScaleTime>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<Title>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    #[serde(rename = "type")]
-    pub r#type: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub weight: NumberString,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ScaleBorder {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub color: String,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub dash: Vec<NumberString>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub dashOffset: NumberString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display: Option<bool>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub width: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub z: NumberString,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Grid {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub color: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub drawOnChartArea: Option<bool>,
-    #[serde(skip_serializing_if = "String::is_empty", default, skip_deserializing)]
-    // the skip_deserializing needed because chartjs sets a default with a different type, FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub tickColor: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub z: NumberString,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct LineAnnotation {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub borderColor: String,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub borderDash: Vec<NumberString>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderWidth: NumberString,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub drawTime: String,
-    #[serde(default, rename = "type")]
-    pub r#type: LineAnnotationType,
-    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub xMax: NumberOrDateString,
-    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub xMin: NumberOrDateString,
-    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub yMax: NumberOrDateString,
-    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
-    pub yMin: NumberOrDateString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub yScaleID: NumberString,
-}
-impl Annotation for LineAnnotation {}
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct LineAnnotationType;
-impl<'de> Deserialize<'de> for LineAnnotationType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        match String::deserialize(deserializer)?.to_lowercase().as_str() {
-            "line" => Ok(LineAnnotationType),
-            other => Err(de::Error::custom(format!(
-                "`{other}` is not a valid LineAnnotationType."
-            ))),
-        }
+//
+impl Ord for XYPoint {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.x.cmp(&other.x)
     }
 }
+//
+impl PartialOrd for XYPoint {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+//
+impl Serialize for BoxAnnotationType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str("box")
+    }
+}
+//
 impl Serialize for LineAnnotationType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -803,33 +745,7 @@ impl Serialize for LineAnnotationType {
         serializer.serialize_str("line")
     }
 }
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BoxAnnotation {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub backgroundColor: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub borderColor: String,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub borderDash: Vec<NumberString>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderWidth: NumberString,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub drawTime: String,
-    #[serde(default, rename = "type")]
-    pub r#type: BoxAnnotationType,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub xMax: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub xMin: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub yMax: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub yMin: NumberString,
-}
-impl Annotation for BoxAnnotation {}
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BoxAnnotationType;
+//
 impl<'de> Deserialize<'de> for BoxAnnotationType {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -843,252 +759,17 @@ impl<'de> Deserialize<'de> for BoxAnnotationType {
         }
     }
 }
-impl Serialize for BoxAnnotationType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+impl<'de> Deserialize<'de> for LineAnnotationType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        S: serde::Serializer,
+        D: serde::Deserializer<'de>,
     {
-        serializer.serialize_str("box")
+        match String::deserialize(deserializer)?.to_lowercase().as_str() {
+            "line" => Ok(LineAnnotationType),
+            other => Err(de::Error::custom(format!(
+                "`{other}` is not a valid LineAnnotationType."
+            ))),
+        }
     }
 }
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ScaleTime {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub displayFormats: Option<DisplayFormats>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub unit: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DisplayFormats {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub day: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub hour: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub minute: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub month: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub quarter: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub week: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub year: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ScaleTicks {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub autoSkip: Option<bool>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub align: String,
-    #[serde(
-        skip_serializing_if = "FnWithArgs::is_empty",
-        default,
-        skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    )]
-    pub callback: FnWithArgs,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub count: NumberString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub font: Option<Font>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub includeBounds: Option<bool>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub maxTicksLimit: NumberString,
-    #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
-    // the skip_deserializing needed because chartjs sets a default with a different type, FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub padding: Option<Padding>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub precision: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub stepSize: NumberString,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Title {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub font: Option<Font>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub text: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ChartInteraction {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub axis: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub intersect: Option<bool>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub mode: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ChartLegend {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub labels: Option<LegendLabel>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub position: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct LegendLabel {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub boxHeight: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub boxWidth: Option<usize>,
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
-    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub filter: FnWithArgs,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub font: Option<Font>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub pointStyle: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub pointStyleWidth: NumberString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub useBorderRadius: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub usePointStyle: Option<bool>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ChartElements {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bar: Option<BarElementConfiguration>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line: Option<LineElementConfiguration>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub point: Option<PointElementConfiguration>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BarElementConfiguration {
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderRadius: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderWidth: NumberString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fill: Option<bool>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub hoverBorderWidth: NumberString,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct LineElementConfiguration {
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderWidth: NumberString,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub cubicInterpolationMode: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fill: Option<bool>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PointElementConfiguration {
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderWidth: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub hitRadius: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub hoverBorderWidth: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub hoverRadius: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub radius: NumberString,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DataLabels {
-    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub align: FnWithArgsOrAny,
-    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub anchor: FnWithArgsOrAny,
-    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub backgroundColor: FnWithArgsOrAny,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub borderRadius: NumberString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub clamp: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub clip: Option<bool>,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub color: String,
-    #[serde(default = "BoolString::_false")]
-    pub display: BoolString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub drawTime: NumberString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub font: Option<Font>,
-    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
-    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub formatter: FnWithArgs,
-    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub offset: FnWithArgsOrAny,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub opacity: NumberString,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub padding: Option<Padding>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub z: NumberString,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Border {
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub bottom: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub left: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub right: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub top: NumberString,
-}
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Padding {
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub bottom: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub left: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub right: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub top: NumberString,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Font {
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub family: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub lineHeight: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub size: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub style: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub weight: NumberString,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Segment {
-    #[serde(
-        skip_serializing_if = "FnWithArgs::is_empty",
-        default,
-        skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    )]
-    pub borderColor: FnWithArgs,
-    #[serde(
-        skip_serializing_if = "FnWithArgs::is_empty",
-        default,
-        skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    )]
-    pub borderDash: FnWithArgs,
-}
+//

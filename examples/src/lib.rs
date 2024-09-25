@@ -4,7 +4,7 @@ use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
 use itertools::Itertools;
 use rand::Rng;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::BTreeMap,
     pin::Pin,
     sync::Arc,
     task::{Context, Poll},
@@ -93,123 +93,100 @@ impl Model {
 
         let chart = Scatter::<NoAnnotations> {
             // we use <NoAnnotations> here to type hint for the compiler
-            data: Dataset {
-                datasets: Vec::from([
-                    XYDataset {
-                        data: x.iter().zip(y1).into_data_iter().unsorted_to_dataset_data(), // collect into dataset
-                        borderColor: "red".into(),
-                        backgroundColor: "lightcoral".into(),
-                        pointRadius: 4.into(),
-                        label: "Dataset 1".into(),
-                        ..Default::default() // always use `..Default::default()` to make sure this works in the future
-                    },
-                    XYDataset {
-                        data: x.iter().zip(y2).into_data_iter().unsorted_to_dataset_data(), // collect into dataset
-                        borderColor: "blue".into(),
-                        backgroundColor: "lightskyblue".into(),
-                        pointRadius: 4.into(),
-                        label: "Dataset 2".into(),
-                        ..Default::default() // always use `..Default::default()` to make sure this works in the future
-                    },
-                ]),
-                ..Default::default()
-            },
-            options: ChartOptions {
-                maintainAspectRatio: Some(false),
-                ..Default::default() // always use `..Default::default()` to make sure this works in the future
-            },
+            data: Dataset::new().datasets([
+                XYDataset::new()
+                    .data(x.iter().zip(y1).into_data_iter().unsorted_to_dataset_data()) // collect into dataset
+                    .border_color("red")
+                    .background_color("lightcoral")
+                    .point_radius(4)
+                    .label("Dataset 1"),
+                XYDataset::new()
+                    .data(x.iter().zip(y2).into_data_iter().unsorted_to_dataset_data()) // collect into dataset
+                    .border_color("blue")
+                    .background_color("lightskyblue")
+                    .point_radius(4)
+                    .label("Dataset 2"),
+            ]),
+            options: ChartOptions::new().maintain_aspect_ratio(false),
             id: id.into(),
             ..Default::default()
         };
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
-            .prop("id", id)
-            .style("height", "calc(100vh - 270px)")
-            .after_inserted(move |_| {
+           .prop("id", id)
+           .style("height", "calc(100vh - 270px)")
+           .after_inserted(move |_| {
                 chart.into_chart().mutate().render();
             })
         })
     }
+
     fn show_line(self: Arc<Self>, x: &[usize], y1: &[usize], y2: &[usize]) -> Dom {
         // construct and render chart here
         let id = "line";
 
-        let chart = Scatter::<NoAnnotations> {
-            // we use <NoAnnotations> here to type hint for the compiler
-            data: Dataset {
-                datasets: Vec::from([
-                    XYDataset {
-                        data: x
-                            .iter()
-                            .zip(y1)
-                            .enumerate()
-                            .map(|(x, d)| {
-                                if x % 5 == 0 { ("NaN".to_string(), "NaN".to_string()) } else {
-                                    (d.0.to_string(), d.1.to_string())
-                                }
-                            })
-                            .into_data_iter()
-                            .unsorted_to_dataset_data(), // collect into dataset
-                        spanGaps: true.into(),
-                        segment: Segment {
-                            borderDash: FnWithArgs::new()
-                                .arg("ctx")
-                                .return_value("ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined"),
-                            borderColor: FnWithArgs::new()
-                                .arg("ctx")
-                                .return_value("ctx.p0.skip || ctx.p1.skip ? 'lightgrey' : (ctx.p0.parsed.y > ctx.p1.parsed.y) ? 'firebrick' : 'green'"),
-                        }
-                        .into(),
-                        pointRadius: 4.into(),
-                        pointBorderColor: "darkgreen".into(),
-                        pointBackgroundColor: "palegreen".into(),
-                        label: "Dataset 1".into(),
-                        r#type: "line".into(),
-                        ..Default::default() // always use `..Default::default()` to make sure this works in the future
-                    },
-                    XYDataset {
-                        data: x
-                            .iter()
-                            .zip(y2)
-                            .into_data_iter()
-                            .unsorted_to_dataset_data(), // collect into dataset
-
-                        borderColor: "blue".into(),
-                        backgroundColor: "lightskyblue".into(),
-                        pointBorderColor: "blue".into(),
-                        pointBackgroundColor: "lightskyblue".into(),
-                        pointRadius: 4.into(),
-                        label: "Dataset 2".into(),
-                        r#type: "line".into(),
-                        ..Default::default() // always use `..Default::default()` to make sure this works in the future
-                    },
+        let chart =
+            Scatter::<NoAnnotations> {
+                // we use <NoAnnotations> here to type hint for the compiler
+                data: Dataset::new().datasets([
+                    XYDataset::new()
+                        .data(
+                            x.iter()
+                                .zip(y1)
+                                .enumerate()
+                                .map(|(x, d)| {
+                                    if x % 5 == 0 {
+                                        ("NaN".to_string(), "NaN".to_string())
+                                    } else {
+                                        (d.0.to_string(), d.1.to_string())
+                                    }
+                                })
+                                .into_data_iter()
+                                .unsorted_to_dataset_data(), // collect into dataset
+                        )
+                        .span_gaps(true)
+                        .point_radius(4)
+                        .point_border_color("darkgreen")
+                        .point_background_color("palegreen")
+                        .label("Dataset 1")
+                        .r_type("line")
+                        .segment(
+                            Segment::new()
+                                .border_dash(FnWithArgs::new().arg("ctx").return_value(
+                                    "ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined",
+                                ))
+                                .border_color(FnWithArgs::new().arg("ctx").return_value(
+                                    "ctx.p0.skip || ctx.p1.skip ? 'lightgrey' : (ctx.p0.parsed.y > ctx.p1.parsed.y) ? 'firebrick' : 'green'"
+                                )),
+                        ),
+                    XYDataset::new()
+                        .data(x.iter().zip(y2).into_data_iter().unsorted_to_dataset_data()) // collect into dataset
+                        .border_color("blue")
+                        .background_color("lightskyblue")
+                        .point_border_color("blue")
+                        .point_background_color("lightskyblue")
+                        .point_radius(4)
+                        .label("Dataset 2")
+                        .r_type("line"),
                 ]),
+                options: ChartOptions::new()
+                    .scales([(
+                        "x",
+                        ChartScale::new()
+                            .r_type("linear")
+                            .ticks(ScaleTicks::new().callback(
+                                FnWithArgs::new().arg("value").arg("index").return_value(
+                                    "index % 2 === 0 ? this.getLabelForValue(value) : ''",
+                                ),
+                            )),
+                    )])
+                    .maintain_aspect_ratio(false),
+                id: id.into(),
                 ..Default::default()
-            },
-            options: ChartOptions {
-                scales: Some(HashMap::from([(
-                    "x".into(),
-                    ChartScale {
-                        r#type: "linear".into(),
-                        ticks: ScaleTicks {
-                            callback: FnWithArgs::new()
-                                .arg("value")
-                                .arg("index")
-                                .return_value("index % 2 === 0 ? this.getLabelForValue(value) : ''"),
-                            ..Default::default()
-                        }.into(),
-                        ..Default::default()
-                    },
-                )])),
-                maintainAspectRatio: Some(false),
-                ..Default::default() // always use `..Default::default()` to make sure this works in the future
-            },
-            id: id.into(),
-            ..Default::default()
-        };
+            };
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
-            .prop("id", id)
-            .style("height", "calc(100vh - 270px)")
-            .after_inserted(move |_| {
+           .prop("id", id)
+           .style("height", "calc(100vh - 270px)")
+           .after_inserted(move |_| {
                 chart.into_chart().mutate().render();
             })
         })
@@ -221,39 +198,33 @@ impl Model {
 
         let chart = Bar::<NoAnnotations> {
             // we use <NoAnnotations> here to type hint for the compiler
-            data: Dataset {
-                labels: Some(
+            data: Dataset::new()
+                .labels(
                     // use a range to give us our X axis labels
-                    (0..data.len()).map(|d| (d + 1).into()).collect(),
-                ),
-                datasets: Vec::from([XYDataset {
-                    data: data
-                        .iter()
-                        .enumerate()
-                        .map(|(x, y)| ((x + 1), y))
-                        .into_data_iter()
-                        .unsorted_to_dataset_data(), // collect into dataset
-
-                    backgroundColor: "palegreen".into(),
-                    borderColor: "green".into(),
-                    borderWidth: Some(2.into()),
-                    label: "Dataset 1".into(),
-                    yAxisID: "y".into(),
-                    ..Default::default() // always use `..Default::default()` to make sure this works in the future
-                }]),
-            },
-            options: ChartOptions {
-                maintainAspectRatio: Some(false),
-                ..Default::default() // always use `..Default::default()` to make sure this works in the future
-            },
+                    (0..data.len()).map(|d| d + 1),
+                )
+                .datasets([XYDataset::new()
+                    .data(
+                        data.iter()
+                            .enumerate()
+                            .map(|(x, y)| ((x + 1), y))
+                            .into_data_iter()
+                            .unsorted_to_dataset_data(), // collect into dataset
+                    )
+                    .background_color("palegreen")
+                    .border_color("green")
+                    .border_width(2)
+                    .label("Dataset 1")
+                    .y_axis_id("y")]),
+            options: ChartOptions::new().maintain_aspect_ratio(false),
             id: id.into(),
             ..Default::default()
         };
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
-            .prop("id", id)
-            .style("height", "calc(100vh - 270px)")
-            .after_inserted(move |_| {
-                chart.into_chart().render() // use .to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
+           .prop("id", id)
+           .style("height", "calc(100vh - 270px)")
+           .after_inserted(move |_| {
+                chart.into_chart().render() // use.to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
             })
         })
     }
@@ -265,85 +236,63 @@ impl Model {
 
         let three_a_chart: Doughnut<NoAnnotations> = Doughnut {
             data: {
-                Dataset {
-                    datasets: {
-                        Vec::from([SinglePointDataset {
-                            data: Vec::from([300.into(), 40.into(), 56.into(), 22.into()]),
-                            backgroundColor: Vec::from([
-                                "dodgerblue".into(),
-                                "limegreen".into(),
-                                "firebrick".into(),
-                                "goldenrod".into(),
-                            ]),
-                            ..Default::default()
-                        }])
-                    },
-                    labels: Some(Vec::from([
-                        "Blueberries".into(),
-                        "Limes".into(),
-                        "Apples".into(),
-                        "Lemons".into(),
-                    ])),
-                }
+                Dataset::new()
+                    .datasets({
+                        [SinglePointDataset::new()
+                            .data([300, 40, 56, 22])
+                            .background_color([
+                                "dodgerblue",
+                                "limegreen",
+                                "firebrick",
+                                "goldenrod",
+                            ])]
+                    })
+                    .labels(["Blueberries", "Limes", "Apples", "Lemons"])
             },
-            options: ChartOptions {
-                maintainAspectRatio: Some(false),
-                ..Default::default()
-            },
+            options: ChartOptions::new().maintain_aspect_ratio(false),
             id: three_id.to_string(),
             ..Default::default()
         };
         let three_b_chart: Pie<NoAnnotations> = Pie {
             data: {
-                Dataset {
-                    datasets: {
-                        Vec::from([SinglePointDataset {
-                            data: Vec::from([300.into(), 40.into(), 56.into(), 22.into()]),
-                            backgroundColor: Vec::from([
-                                "dodgerblue".into(),
-                                "limegreen".into(),
-                                "firebrick".into(),
-                                "goldenrod".into(),
-                            ]),
-                            ..Default::default()
-                        }])
-                    },
-                    labels: Some(Vec::from([
-                        "Blueberries".into(),
-                        "Limes".into(),
-                        "Apples".into(),
-                        "Lemons".into(),
-                    ])),
-                }
+                Dataset::new()
+                    .datasets({
+                        [SinglePointDataset::new()
+                            .data([300, 40, 56, 22])
+                            .background_color([
+                                "dodgerblue",
+                                "limegreen",
+                                "firebrick",
+                                "goldenrod",
+                            ])]
+                    })
+                    .labels(["Blueberries", "Limes", "Apples", "Lemons"])
             },
-            options: ChartOptions {
-                maintainAspectRatio: Some(false),
-                ..Default::default()
-            },
+            options: ChartOptions::new().maintain_aspect_ratio(false),
             id: four_id.to_string(),
             ..Default::default()
         };
         html!("div", {
-            .class("columns")
-            .children([
+           .class("columns")
+           .children([
                 html!("div", {
-                    .class(["column", "is-half"])
-                    .child(
+                   .class(["column", "is-half"])
+                   .child(
                         html!("canvas", {
-                        .prop("id", three_id)
-                        .style("height", "calc(100vh - 270px)")
-                        .after_inserted(move |_| {
+                       .prop("id", three_id)
+                       .style("height", "calc(100vh - 270px)")
+                       .after_inserted(move |_| {
                             three_a_chart.into_chart().render()
                         })
                     }))
                 }),
                 html!("div", {
-                    .class(["column", "is-half"])
-                    .child(
+                   .class(["column", "is-half"])
+                   .child(
                         html!("canvas", {
-                        .prop("id", four_id)
-                        .style("height", "calc(100vh - 270px)")
-                        .after_inserted(move |_| {
+                       .prop("id", four_id)
+                       .style("height", "calc(100vh - 270px)")
+                       .after_inserted(move |_| {
                             three_b_chart.into_chart().render()
                         })
                     }))
@@ -354,16 +303,16 @@ impl Model {
 
     fn render(self: Arc<Self>) -> Dom {
         html!("div", {
-            .class("section")
-            .child(
+           .class("section")
+           .child(
                 html!("div", {
-                    .class(["buttons", "has-addons"])
-                    .child(
+                   .class(["buttons", "has-addons"])
+                   .child(
                         html!("button", {
-                            .class(["button", "is-info"])
-                            .prop_signal("disabled", self.clone().chart_selected("donut"))
-                            .text("Randomise")
-                            .event({
+                           .class(["button", "is-info"])
+                           .prop_signal("disabled", self.clone().chart_selected("donut"))
+                           .text("Randomise")
+                           .event({
                                 let model = self.clone();
                                 move |_: events::Click| {
                                     // randomise the data on button click
@@ -373,12 +322,12 @@ impl Model {
                             })
                         })
                     )
-                    .child(
+                   .child(
                         html!("button", {
-                            .class(["button", "is-primary"])
-                            .class_signal("is-light", self.clone().chart_not_selected("scatter"))
-                            .text("Scatter")
-                            .event({
+                           .class(["button", "is-primary"])
+                           .class_signal("is-light", self.clone().chart_not_selected("scatter"))
+                           .text("Scatter")
+                           .event({
                                 let model = self.clone();
                                 move |_: events::Click| {
                                     model.clone().chart.set("scatter".into()); // change which chart is in view
@@ -387,12 +336,12 @@ impl Model {
                             })
                         })
                     )
-                    .child(
+                   .child(
                         html!("button", {
-                            .class(["button", "is-success"])
-                            .class_signal("is-light", self.clone().chart_not_selected("line"))
-                            .text("Line")
-                            .event({
+                           .class(["button", "is-success"])
+                           .class_signal("is-light", self.clone().chart_not_selected("line"))
+                           .text("Line")
+                           .event({
                                 let model = self.clone();
                                 move |_: events::Click| {
                                     model.clone().chart.set("line".into()); // change which chart is in view
@@ -401,12 +350,12 @@ impl Model {
                             })
                         })
                     )
-                    .child(
+                   .child(
                         html!("button", {
-                            .class(["button", "is-primary"])
-                            .class_signal("is-light", self.clone().chart_not_selected("bar"))
-                            .text("Bar")
-                            .event({
+                           .class(["button", "is-primary"])
+                           .class_signal("is-light", self.clone().chart_not_selected("bar"))
+                           .text("Bar")
+                           .event({
                                 let model = self.clone();
                                 move |_: events::Click| {
                                     model.clone().chart.set("bar".into()); // change which chart is in view
@@ -415,12 +364,12 @@ impl Model {
                             })
                         })
                     )
-                    .child(
+                   .child(
                         html!("button", {
-                            .class(["button", "is-success"])
-                            .class_signal("is-light", self.clone().chart_not_selected("donut"))
-                            .text("Donut")
-                            .event({
+                           .class(["button", "is-success"])
+                           .class_signal("is-light", self.clone().chart_not_selected("donut"))
+                           .text("Donut")
+                           .event({
                                 let model = self.clone();
                                 move |_: events::Click| {
                                     model.clone().chart.set("donut".into()); // change which chart is in view
@@ -429,37 +378,37 @@ impl Model {
                             })
                         })
                     )
-                    .child_signal(self.chart.signal_cloned().map(|c|
+                   .child_signal(self.chart.signal_cloned().map(|c|
                         if c.as_ref() == "scatter" {
                             Some(html!("button", {
-                                .class("button")
-                                .prop("disabled", true)
+                               .class("button")
+                               .prop("disabled", true)
                             }))
                         }
                         else {
                             None
                         })
                     )
-                    .child_signal(self.chart.signal_cloned().map({
+                   .child_signal(self.chart.signal_cloned().map({
                         let _self = self.clone();
                         move |c|
                             if c.as_ref() == "scatter" {
                                 Some(
                                     html!("button", {
-                                        .class(["button", "is-info"])
-                                        .text("Update Chart")
-                                        .event({
+                                       .class(["button", "is-info"])
+                                       .text("Update Chart")
+                                       .event({
                                             let _self = _self.clone();
                                             move |_: events::Click| {
                                                 // update scatter chart colour
                                                 let mut chart: Scatter::<NoAnnotations> = ChartExt::get_chart_from_id("scatter").expect("Unable to retrieve chart from JS.");
-                                                chart.data.datasets.get_mut(0).map(|d| {
+                                                chart.data.get_datasets().get_mut(0).map(|d| {
                                                     if _self.tick.get() {
-                                                        d.backgroundColor = "lightcoral".into();
-                                                        d.borderColor = "red".into();
+                                                        *d.get_background_color() = "lightcoral".into();
+                                                        *d.get_border_color() = "red".into();
                                                     } else {
-                                                        d.backgroundColor = "palegreen".into();
-                                                        d.borderColor = "green".into();
+                                                        *d.get_background_color() = "palegreen".into();
+                                                        *d.get_border_color() = "green".into();
                                                     }
                                                 }).unwrap();
                                                 chart.into_chart().update(true);
@@ -474,26 +423,26 @@ impl Model {
                             }
                         })
                     )
-                    .child_signal(self.chart.signal_cloned().map({
+                   .child_signal(self.chart.signal_cloned().map({
                         let _self = self.clone();
                         move |c|
                             if c.as_ref() == "scatter" {
                                 Some(
                                     html!("button", {
-                                        .class(["button", "is-info"])
-                                        .text("Update Chart without animation")
-                                        .event({
+                                       .class(["button", "is-info"])
+                                       .text("Update Chart without animation")
+                                       .event({
                                             let _self = _self.clone();
                                             move |_: events::Click| {
                                                 // update scatter chart colour
                                                 let mut chart: Scatter::<NoAnnotations> = ChartExt::get_chart_from_id("scatter").expect("Unable to retrieve chart from JS.");
-                                                chart.data.datasets.get_mut(0).map(|d| {
+                                                chart.data.get_datasets().get_mut(0).map(|d| {
                                                     if _self.tick.get() {
-                                                        d.backgroundColor = "lightcoral".into();
-                                                        d.borderColor = "red".into();
+                                                        *d.get_background_color() = "lightcoral".into();
+                                                        *d.get_border_color() = "red".into();
                                                     } else {
-                                                        d.backgroundColor = "palegreen".into();
-                                                        d.borderColor = "green".into();
+                                                        *d.get_background_color() = "palegreen".into();
+                                                        *d.get_border_color() = "green".into();
                                                     }
                                                 }).unwrap();
                                                 chart.into_chart().update(false);
@@ -510,10 +459,10 @@ impl Model {
                     )
                 })
             )
-            .child(
+           .child(
                 html!("div", {
-                    .class("section")
-                    .child_signal(self.show_charts()) // render charts here, signal allows us to change the chart, see the `Dominator` crate for more
+                   .class("section")
+                   .child_signal(self.show_charts()) // render charts here, signal allows us to change the chart, see the `Dominator` crate for more
                 })
             )
         })
@@ -523,12 +472,9 @@ impl Model {
 #[wasm_bindgen(start)]
 pub async fn main_js() -> Result<(), JsValue> {
     let app = Model::init().await;
-
     dominator::append_dom(&dominator::body(), Model::render(app));
-
     Ok(())
 }
-
 pub struct Mutable3<A, B, C>(
     (MutableSignalCloned<A>, Mutable<A>),
     (MutableSignalCloned<B>, Mutable<B>),
@@ -559,13 +505,11 @@ where
     C: Clone,
 {
     type Item = (A, B, C);
-
     fn poll_change(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         let a = Pin::new(&mut self.0 .0).poll_change(cx);
         let b = Pin::new(&mut self.1 .0).poll_change(cx);
         let c = Pin::new(&mut self.2 .0).poll_change(cx);
         let mut changed = false;
-
         let left_done = match a {
             Poll::Ready(None) => true,
             Poll::Ready(_) => {
@@ -574,7 +518,6 @@ where
             }
             Poll::Pending => false,
         };
-
         let middle_done = match b {
             Poll::Ready(None) => true,
             Poll::Ready(_) => {
@@ -583,7 +526,6 @@ where
             }
             Poll::Pending => false,
         };
-
         let right_done = match c {
             Poll::Ready(None) => true,
             Poll::Ready(_) => {
@@ -592,7 +534,6 @@ where
             }
             Poll::Pending => false,
         };
-
         if changed {
             Poll::Ready(Some((
                 self.0 .1.get_cloned(),
@@ -606,7 +547,6 @@ where
         }
     }
 }
-
 pub struct Mutable4<A, B, C, D>(
     (MutableSignalCloned<A>, Mutable<A>),
     (MutableSignalCloned<B>, Mutable<B>),
@@ -642,14 +582,12 @@ where
     D: Clone,
 {
     type Item = (A, B, C, D);
-
     fn poll_change(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         let a = Pin::new(&mut self.0 .0).poll_change(cx);
         let b = Pin::new(&mut self.1 .0).poll_change(cx);
         let c = Pin::new(&mut self.2 .0).poll_change(cx);
         let d = Pin::new(&mut self.3 .0).poll_change(cx);
         let mut changed = false;
-
         let left_done = match a {
             Poll::Ready(None) => true,
             Poll::Ready(_) => {
@@ -658,7 +596,6 @@ where
             }
             Poll::Pending => false,
         };
-
         let left_middle_done = match b {
             Poll::Ready(None) => true,
             Poll::Ready(_) => {
@@ -675,7 +612,6 @@ where
             }
             Poll::Pending => false,
         };
-
         let right_done = match d {
             Poll::Ready(None) => true,
             Poll::Ready(_) => {
@@ -684,7 +620,6 @@ where
             }
             Poll::Pending => false,
         };
-
         if changed {
             Poll::Ready(Some((
                 self.0 .1.get_cloned(),
