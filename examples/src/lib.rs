@@ -147,7 +147,7 @@ impl Model {
                         .point_border_color("darkgreen")
                         .point_background_color("palegreen")
                         .label("Dataset 1")
-                        .r_type("line")
+                        .dataset_type("line")
                         .segment(
                             Segment::new()
                                 .border_dash(FnWithArgs::new().arg("ctx").return_value(
@@ -165,13 +165,13 @@ impl Model {
                         .point_background_color("lightskyblue")
                         .point_radius(4)
                         .label("Dataset 2")
-                        .r_type("line"),
+                        .dataset_type("line"),
                 ]))
                 .options(ChartOptions::new()
                     .scales([(
                         "x",
                         ChartScale::new()
-                            .r_type("linear")
+                            .scale_type("linear")
                             .ticks(ScaleTicks::new().callback(
                                 FnWithArgs::new().arg("value").arg("index").return_value(
                                     "index % 2 === 0 ? this.getLabelForValue(value) : ''",

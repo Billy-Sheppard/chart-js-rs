@@ -64,13 +64,29 @@ fn main() {
                 .into_iter()
                 .map(|field| {
                     let name = &field.ident;
+
+                    let l_name = name.as_ref().unwrap().to_string().to_snake_case();
+                    let set_name =
+                        &if l_name.eq("r_type") {
+                            format!(
+                                "{}_{}", 
+                                s_name.to_string()
+                                    .to_snake_case()
+                                    .split("_")
+                                    .last()
+                                    .unwrap_or_default(),
+                                l_name
+                            ).replace("r_", "")
+                        }
+                        else {
+                            l_name
+                        };
                     let get_name = syn::Ident::new(
-                        &format!("get_{}", name.clone().unwrap().to_string().to_snake_case()),
+                        &format!("get_{}", set_name),
                         proc_macro2::Span::call_site(),
                     );
-                    let set_name = ident(
-                        &name.clone().unwrap().to_string().to_snake_case(),
-                    ).unwrap();
+                    let set_name = ident(set_name).unwrap();
+
                     let type_ = field.ty.clone();
 
                     let (type_segments, type_seperators) = type_segments(&type_);

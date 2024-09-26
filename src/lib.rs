@@ -29,7 +29,7 @@ pub trait ChartExt<A: Annotation + DeserializeOwned>:
         Self::default().id(id.as_ref().into())
     }
 
-    fn get_id(self) -> String;    
+    fn get_id(self) -> String;
     fn id(self, id: String) -> Self;
 
     fn get_data(&mut self) -> &mut Self::DS;
@@ -43,7 +43,6 @@ pub trait ChartExt<A: Annotation + DeserializeOwned>:
         *self.get_options() = options.into();
         self
     }
-
 
     fn into_chart(self) -> Chart {
         Chart {

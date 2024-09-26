@@ -27,7 +27,7 @@ impl<A: Annotation + DeserializeOwned> ChartExt<A> for Doughnut<A> {
     fn get_data(&mut self) -> &mut Self::DS {
         &mut self.data
     }
-    
+
     fn get_options(&mut self) -> &mut ChartOptions<A> {
         &mut self.options
     }

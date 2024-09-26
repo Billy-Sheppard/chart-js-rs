@@ -279,10 +279,10 @@ impl SinglePointDataset {
         self
     }
 
-    pub fn get_r_type(&mut self) -> &mut String {
+    pub fn get_dataset_type(&mut self) -> &mut String {
         &mut self.r#type
     }
-    pub fn r_type(mut self, value: impl Into<String>) -> SinglePointDataset {
+    pub fn dataset_type(mut self, value: impl Into<String>) -> SinglePointDataset {
         self.r#type = value.into();
         self
     }
@@ -699,10 +699,10 @@ impl XYDataset {
         self
     }
 
-    pub fn get_r_type(&mut self) -> &mut String {
+    pub fn get_dataset_type(&mut self) -> &mut String {
         &mut self.r#type
     }
-    pub fn r_type(mut self, value: impl Into<String>) -> XYDataset {
+    pub fn dataset_type(mut self, value: impl Into<String>) -> XYDataset {
         self.r#type = value.into();
         self
     }
@@ -1307,10 +1307,10 @@ impl ChartScale {
         self
     }
 
-    pub fn get_r_type(&mut self) -> &mut String {
+    pub fn get_scale_type(&mut self) -> &mut String {
         &mut self.r#type
     }
-    pub fn r_type(mut self, value: impl Into<String>) -> ChartScale {
+    pub fn scale_type(mut self, value: impl Into<String>) -> ChartScale {
         self.r#type = value.into();
         self
     }
@@ -1467,10 +1467,10 @@ impl LineAnnotation {
         self
     }
 
-    pub fn get_r_type(&mut self) -> &mut LineAnnotationType {
+    pub fn get_annotation_type(&mut self) -> &mut LineAnnotationType {
         &mut self.r#type
     }
-    pub fn r_type(mut self, value: impl Into<LineAnnotationType>) -> LineAnnotation {
+    pub fn annotation_type(mut self, value: impl Into<LineAnnotationType>) -> LineAnnotation {
         self.r#type = value.into();
         self
     }
@@ -1570,10 +1570,10 @@ impl BoxAnnotation {
         self
     }
 
-    pub fn get_r_type(&mut self) -> &mut BoxAnnotationType {
+    pub fn get_annotation_type(&mut self) -> &mut BoxAnnotationType {
         &mut self.r#type
     }
-    pub fn r_type(mut self, value: impl Into<BoxAnnotationType>) -> BoxAnnotation {
+    pub fn annotation_type(mut self, value: impl Into<BoxAnnotationType>) -> BoxAnnotation {
         self.r#type = value.into();
         self
     }
