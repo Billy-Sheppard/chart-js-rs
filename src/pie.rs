@@ -8,15 +8,29 @@ use crate::{objects::*, traits::*, ChartExt};
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Pie<A: Annotation> {
     #[serde(rename = "type")]
-    pub r#type: PieString,
-    pub data: Dataset<Vec<SinglePointDataset>>,
-    pub options: ChartOptions<A>,
-    pub id: String,
+    r#type: PieString,
+    data: Dataset<Vec<SinglePointDataset>>,
+    options: ChartOptions<A>,
+    id: String,
 }
 
-impl<A: Annotation + DeserializeOwned> ChartExt for Pie<A> {
+impl<A: Annotation + DeserializeOwned> ChartExt<A> for Pie<A> {
+    type DS = Dataset<Vec<SinglePointDataset>>;
+
     fn get_id(self) -> String {
         self.id
+    }
+    fn id(mut self, id: String) -> Self {
+        self.id = id;
+        self
+    }
+
+    fn get_data(&mut self) -> &mut Self::DS {
+        &mut self.data
+    }
+    
+    fn get_options(&mut self) -> &mut ChartOptions<A> {
+        &mut self.options
     }
 }
 

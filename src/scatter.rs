@@ -8,15 +8,29 @@ use crate::{objects::*, traits::*, ChartExt};
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Scatter<A: Annotation> {
     #[serde(rename = "type")]
-    pub r#type: ScatterString,
-    pub data: Dataset<Vec<XYDataset>>,
-    pub options: ChartOptions<A>,
-    pub id: String,
+    r#type: ScatterString,
+    data: Dataset<Vec<XYDataset>>,
+    options: ChartOptions<A>,
+    id: String,
 }
 
-impl<A: Annotation + DeserializeOwned> ChartExt for Scatter<A> {
+impl<A: Annotation + DeserializeOwned> ChartExt<A> for Scatter<A> {
+    type DS = Dataset<Vec<XYDataset>>;
+
     fn get_id(self) -> String {
         self.id
+    }
+    fn id(mut self, id: String) -> Self {
+        self.id = id;
+        self
+    }
+
+    fn get_data(&mut self) -> &mut Self::DS {
+        &mut self.data
+    }
+
+    fn get_options(&mut self) -> &mut ChartOptions<A> {
+        &mut self.options
     }
 }
 

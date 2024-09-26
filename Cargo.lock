@@ -124,7 +124,7 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "chart-js-rs"
-version = "0.0.38"
+version = "0.0.39"
 dependencies = [
  "gloo-console",
  "gloo-utils",
@@ -137,7 +137,7 @@ dependencies = [
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
- "syn 2.0.77",
+ "syn 1.0.109",
  "thiserror",
  "wasm-bindgen",
 ]

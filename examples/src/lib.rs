@@ -91,26 +91,25 @@ impl Model {
         // construct and render chart here
         let id = "scatter";
 
-        let chart = Scatter::<NoAnnotations> {
+        let chart = Scatter::<NoAnnotations>::new(id)
             // we use <NoAnnotations> here to type hint for the compiler
-            data: Dataset::new().datasets([
-                XYDataset::new()
-                    .data(x.iter().zip(y1).into_data_iter().unsorted_to_dataset_data()) // collect into dataset
-                    .border_color("red")
-                    .background_color("lightcoral")
-                    .point_radius(4)
-                    .label("Dataset 1"),
-                XYDataset::new()
-                    .data(x.iter().zip(y2).into_data_iter().unsorted_to_dataset_data()) // collect into dataset
-                    .border_color("blue")
-                    .background_color("lightskyblue")
-                    .point_radius(4)
-                    .label("Dataset 2"),
-            ]),
-            options: ChartOptions::new().maintain_aspect_ratio(false),
-            id: id.into(),
-            ..Default::default()
-        };
+            .data(
+                Dataset::new().datasets([
+                    XYDataset::new()
+                        .data(x.iter().zip(y1).into_data_iter().unsorted_to_dataset_data()) // collect into dataset
+                        .border_color("red")
+                        .background_color("lightcoral")
+                        .point_radius(4)
+                        .label("Dataset 1"),
+                    XYDataset::new()
+                        .data(x.iter().zip(y2).into_data_iter().unsorted_to_dataset_data()) // collect into dataset
+                        .border_color("blue")
+                        .background_color("lightskyblue")
+                        .point_radius(4)
+                        .label("Dataset 2"),
+                ]),
+            )
+            .options(ChartOptions::new().maintain_aspect_ratio(false));
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
@@ -125,9 +124,9 @@ impl Model {
         let id = "line";
 
         let chart =
-            Scatter::<NoAnnotations> {
+            Scatter::<NoAnnotations>::new(id)
                 // we use <NoAnnotations> here to type hint for the compiler
-                data: Dataset::new().datasets([
+                .data(Dataset::new().datasets([
                     XYDataset::new()
                         .data(
                             x.iter()
@@ -167,8 +166,8 @@ impl Model {
                         .point_radius(4)
                         .label("Dataset 2")
                         .r_type("line"),
-                ]),
-                options: ChartOptions::new()
+                ]))
+                .options(ChartOptions::new()
                     .scales([(
                         "x",
                         ChartScale::new()
@@ -179,10 +178,8 @@ impl Model {
                                 ),
                             )),
                     )])
-                    .maintain_aspect_ratio(false),
-                id: id.into(),
-                ..Default::default()
-            };
+                    .maintain_aspect_ratio(false)
+                );
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
@@ -196,30 +193,29 @@ impl Model {
         // construct and render chart here
         let id = "bar";
 
-        let chart = Bar::<NoAnnotations> {
+        let chart = Bar::<NoAnnotations>::new(id)
             // we use <NoAnnotations> here to type hint for the compiler
-            data: Dataset::new()
-                .labels(
-                    // use a range to give us our X axis labels
-                    (0..data.len()).map(|d| d + 1),
-                )
-                .datasets([XYDataset::new()
-                    .data(
-                        data.iter()
-                            .enumerate()
-                            .map(|(x, y)| ((x + 1), y))
-                            .into_data_iter()
-                            .unsorted_to_dataset_data(), // collect into dataset
+            .data(
+                Dataset::new()
+                    .labels(
+                        // use a range to give us our X axis labels
+                        (0..data.len()).map(|d| d + 1),
                     )
-                    .background_color("palegreen")
-                    .border_color("green")
-                    .border_width(2)
-                    .label("Dataset 1")
-                    .y_axis_id("y")]),
-            options: ChartOptions::new().maintain_aspect_ratio(false),
-            id: id.into(),
-            ..Default::default()
-        };
+                    .datasets([XYDataset::new()
+                        .data(
+                            data.iter()
+                                .enumerate()
+                                .map(|(x, y)| ((x + 1), y))
+                                .into_data_iter()
+                                .unsorted_to_dataset_data(), // collect into dataset
+                        )
+                        .background_color("palegreen")
+                        .border_color("green")
+                        .border_width(2)
+                        .label("Dataset 1")
+                        .y_axis_id("y")]),
+            )
+            .options(ChartOptions::new().maintain_aspect_ratio(false));
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
@@ -231,11 +227,11 @@ impl Model {
 
     fn show_donut(self: Arc<Self>) -> Dom {
         // construct and render chart here
-        let three_id = "donut_a";
-        let four_id = "donut_b";
+        let three_a_id = "donut_a";
+        let three_b_id = "donut_b";
 
-        let three_a_chart: Doughnut<NoAnnotations> = Doughnut {
-            data: {
+        let three_a_chart = Doughnut::<NoAnnotations>::new(three_a_id)
+            .data(
                 Dataset::new()
                     .datasets({
                         [SinglePointDataset::new()
@@ -247,14 +243,11 @@ impl Model {
                                 "goldenrod",
                             ])]
                     })
-                    .labels(["Blueberries", "Limes", "Apples", "Lemons"])
-            },
-            options: ChartOptions::new().maintain_aspect_ratio(false),
-            id: three_id.to_string(),
-            ..Default::default()
-        };
-        let three_b_chart: Pie<NoAnnotations> = Pie {
-            data: {
+                    .labels(["Blueberries", "Limes", "Apples", "Lemons"]),
+            )
+            .options(ChartOptions::new().maintain_aspect_ratio(false));
+        let three_b_chart = Pie::<NoAnnotations>::new(three_b_id)
+            .data(
                 Dataset::new()
                     .datasets({
                         [SinglePointDataset::new()
@@ -266,12 +259,9 @@ impl Model {
                                 "goldenrod",
                             ])]
                     })
-                    .labels(["Blueberries", "Limes", "Apples", "Lemons"])
-            },
-            options: ChartOptions::new().maintain_aspect_ratio(false),
-            id: four_id.to_string(),
-            ..Default::default()
-        };
+                    .labels(["Blueberries", "Limes", "Apples", "Lemons"]),
+            )
+            .options(ChartOptions::new().maintain_aspect_ratio(false));
         html!("div", {
            .class("columns")
            .children([
@@ -279,7 +269,7 @@ impl Model {
                    .class(["column", "is-half"])
                    .child(
                         html!("canvas", {
-                       .prop("id", three_id)
+                       .prop("id", three_a_id)
                        .style("height", "calc(100vh - 270px)")
                        .after_inserted(move |_| {
                             three_a_chart.into_chart().render()
@@ -290,7 +280,7 @@ impl Model {
                    .class(["column", "is-half"])
                    .child(
                         html!("canvas", {
-                       .prop("id", four_id)
+                       .prop("id", three_b_id)
                        .style("height", "calc(100vh - 270px)")
                        .after_inserted(move |_| {
                             three_b_chart.into_chart().render()
@@ -402,7 +392,7 @@ impl Model {
                                             move |_: events::Click| {
                                                 // update scatter chart colour
                                                 let mut chart: Scatter::<NoAnnotations> = ChartExt::get_chart_from_id("scatter").expect("Unable to retrieve chart from JS.");
-                                                chart.data.get_datasets().get_mut(0).map(|d| {
+                                                chart.get_data().get_datasets().get_mut(0).map(|d| {
                                                     if _self.tick.get() {
                                                         *d.get_background_color() = "lightcoral".into();
                                                         *d.get_border_color() = "red".into();
@@ -436,7 +426,7 @@ impl Model {
                                             move |_: events::Click| {
                                                 // update scatter chart colour
                                                 let mut chart: Scatter::<NoAnnotations> = ChartExt::get_chart_from_id("scatter").expect("Unable to retrieve chart from JS.");
-                                                chart.data.get_datasets().get_mut(0).map(|d| {
+                                                chart.get_data().get_datasets().get_mut(0).map(|d| {
                                                     if _self.tick.get() {
                                                         *d.get_background_color() = "lightcoral".into();
                                                         *d.get_border_color() = "red".into();
