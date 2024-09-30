@@ -1,15 +1,13 @@
 use chart_js_rs::{bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, *};
 use dominator::{events, html, Dom};
-use futures_signals::signal::{Mutable, MutableSignalCloned, Signal, SignalExt};
+use futures_signals::signal::{Mutable, Signal, SignalExt};
 use itertools::Itertools;
 use rand::Rng;
-use std::{
-    collections::BTreeMap,
-    pin::Pin,
-    sync::Arc,
-    task::{Context, Poll},
-};
+use std::{collections::BTreeMap, sync::Arc};
+use utils::*;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
+
+mod utils;
 
 fn random() -> Vec<usize> {
     let rng = rand::thread_rng();
@@ -29,8 +27,6 @@ pub struct Model {
 }
 impl Model {
     async fn init() -> Arc<Self> {
-        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-
         let query_string = gloo::utils::window()
             .location()
             .search()
@@ -123,10 +119,10 @@ impl Model {
         // construct and render chart here
         let id = "line";
 
-        let chart =
-            Scatter::<NoAnnotations>::new(id)
-                // we use <NoAnnotations> here to type hint for the compiler
-                .data(Dataset::new().datasets([
+        let chart = Scatter::<NoAnnotations>::new(id)
+            // we use <NoAnnotations> here to type hint for the compiler
+            .data(
+                Dataset::new().datasets([
                     XYDataset::new()
                         .data(
                             x.iter()
@@ -150,12 +146,39 @@ impl Model {
                         .dataset_type("line")
                         .segment(
                             Segment::new()
-                                .border_dash(FnWithArgs::new().args(["ctx"]).return_value(
-                                    "ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined",
-                                ))
-                                .border_color(FnWithArgs::new().args(["ctx"]).return_value(
-                                    "ctx.p0.skip || ctx.p1.skip ? 'lightgrey' : (ctx.p0.parsed.y > ctx.p1.parsed.y) ? 'firebrick' : 'green'"
-                                )),
+                                .border_dash(
+                                    // one way is to write your logic in Javascript
+                                    FnWithArgs::new()
+                                        .args(["ctx"])
+                                        .js_body(
+                                            "if (ctx.p0.skip || ctx.p1.skip) {
+                                                var out = [2, 2]
+                                            } else {
+                                                var out = undefined
+                                            };",
+                                        )
+                                        .js_return_value("out"),
+                                )
+                                .border_color(
+                                    // alternatively you can pass a closure with the same amount of arguments as the FnWithArgs<N>
+                                    FnWithArgs::new().args(["ctx"]).rust_closure(|ctx| {
+                                        let ctx = uncircle_chartjs_value_to_serde_json_value(ctx)
+                                            .unwrap();
+
+                                        if ctx["p0"]["skip"].as_bool().unwrap()
+                                            || ctx["p1"]["skip"].as_bool().unwrap()
+                                        {
+                                            "lightgrey"
+                                        } else if ctx["p0"]["parsed"]["y"].as_i64()
+                                            > ctx["p1"]["parsed"]["y"].as_i64()
+                                        {
+                                            "firebrick"
+                                        } else {
+                                            "green"
+                                        }
+                                        .into()
+                                    }),
+                                ),
                         ),
                     XYDataset::new()
                         .data(x.iter().zip(y2).into_data_iter().unsorted_to_dataset_data()) // collect into dataset
@@ -166,20 +189,29 @@ impl Model {
                         .point_radius(4)
                         .label("Dataset 2")
                         .dataset_type("line"),
-                ]))
-                .options(ChartOptions::new()
+                ]),
+            )
+            .options(
+                ChartOptions::new()
                     .scales([(
                         "x",
-                        ChartScale::new()
-                            .scale_type("linear")
-                            .ticks(ScaleTicks::new().callback(
-                                FnWithArgs::new().args(["value", "index", "ticks"]).return_value(
-                                    "index % 2 === 0 ? this.getLabelForValue(value) : ''",
-                                ),
-                            )),
+                        ChartScale::new().scale_type("linear").ticks(
+                            ScaleTicks::new().callback(
+                                FnWithArgs::new()
+                                    .args(["value", "index", "ticks"])
+                                    .js_body(
+                                        "if (index % 2 === 0) {
+                                            var out = this.getLabelForValue(value)
+                                        } else {
+                                            var out = ''
+                                        };",
+                                    )
+                                    .js_return_value("out"),
+                            ),
+                        ),
                     )])
-                    .maintain_aspect_ratio(false)
-                );
+                    .maintain_aspect_ratio(false),
+            );
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
@@ -461,166 +493,9 @@ impl Model {
 
 #[wasm_bindgen(start)]
 pub async fn main_js() -> Result<(), JsValue> {
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+
     let app = Model::init().await;
     dominator::append_dom(&dominator::body(), Model::render(app));
     Ok(())
-}
-pub struct Mutable3<A, B, C>(
-    (MutableSignalCloned<A>, Mutable<A>),
-    (MutableSignalCloned<B>, Mutable<B>),
-    (MutableSignalCloned<C>, Mutable<C>),
-)
-where
-    A: Clone,
-    B: Clone,
-    C: Clone;
-impl<A, B, C> Mutable3<A, B, C>
-where
-    A: Clone,
-    B: Clone,
-    C: Clone,
-{
-    pub fn new(a: Mutable<A>, b: Mutable<B>, c: Mutable<C>) -> Self {
-        Mutable3(
-            (a.signal_cloned(), a),
-            (b.signal_cloned(), b),
-            (c.signal_cloned(), c),
-        )
-    }
-}
-impl<A, B, C> Signal for Mutable3<A, B, C>
-where
-    A: Clone,
-    B: Clone,
-    C: Clone,
-{
-    type Item = (A, B, C);
-    fn poll_change(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
-        let a = Pin::new(&mut self.0 .0).poll_change(cx);
-        let b = Pin::new(&mut self.1 .0).poll_change(cx);
-        let c = Pin::new(&mut self.2 .0).poll_change(cx);
-        let mut changed = false;
-        let left_done = match a {
-            Poll::Ready(None) => true,
-            Poll::Ready(_) => {
-                changed = true;
-                false
-            }
-            Poll::Pending => false,
-        };
-        let middle_done = match b {
-            Poll::Ready(None) => true,
-            Poll::Ready(_) => {
-                changed = true;
-                false
-            }
-            Poll::Pending => false,
-        };
-        let right_done = match c {
-            Poll::Ready(None) => true,
-            Poll::Ready(_) => {
-                changed = true;
-                false
-            }
-            Poll::Pending => false,
-        };
-        if changed {
-            Poll::Ready(Some((
-                self.0 .1.get_cloned(),
-                self.1 .1.get_cloned(),
-                self.2 .1.get_cloned(),
-            )))
-        } else if left_done && middle_done && right_done {
-            Poll::Ready(None)
-        } else {
-            Poll::Pending
-        }
-    }
-}
-pub struct Mutable4<A, B, C, D>(
-    (MutableSignalCloned<A>, Mutable<A>),
-    (MutableSignalCloned<B>, Mutable<B>),
-    (MutableSignalCloned<C>, Mutable<C>),
-    (MutableSignalCloned<D>, Mutable<D>),
-)
-where
-    A: Clone,
-    B: Clone,
-    C: Clone,
-    D: Clone;
-impl<A, B, C, D> Mutable4<A, B, C, D>
-where
-    A: Clone,
-    B: Clone,
-    C: Clone,
-    D: Clone,
-{
-    pub fn new(a: Mutable<A>, b: Mutable<B>, c: Mutable<C>, d: Mutable<D>) -> Self {
-        Mutable4(
-            (a.signal_cloned(), a),
-            (b.signal_cloned(), b),
-            (c.signal_cloned(), c),
-            (d.signal_cloned(), d),
-        )
-    }
-}
-impl<A, B, C, D> Signal for Mutable4<A, B, C, D>
-where
-    A: Clone,
-    B: Clone,
-    C: Clone,
-    D: Clone,
-{
-    type Item = (A, B, C, D);
-    fn poll_change(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
-        let a = Pin::new(&mut self.0 .0).poll_change(cx);
-        let b = Pin::new(&mut self.1 .0).poll_change(cx);
-        let c = Pin::new(&mut self.2 .0).poll_change(cx);
-        let d = Pin::new(&mut self.3 .0).poll_change(cx);
-        let mut changed = false;
-        let left_done = match a {
-            Poll::Ready(None) => true,
-            Poll::Ready(_) => {
-                changed = true;
-                false
-            }
-            Poll::Pending => false,
-        };
-        let left_middle_done = match b {
-            Poll::Ready(None) => true,
-            Poll::Ready(_) => {
-                changed = true;
-                false
-            }
-            Poll::Pending => false,
-        };
-        let right_middle_done = match c {
-            Poll::Ready(None) => true,
-            Poll::Ready(_) => {
-                changed = true;
-                false
-            }
-            Poll::Pending => false,
-        };
-        let right_done = match d {
-            Poll::Ready(None) => true,
-            Poll::Ready(_) => {
-                changed = true;
-                false
-            }
-            Poll::Pending => false,
-        };
-        if changed {
-            Poll::Ready(Some((
-                self.0 .1.get_cloned(),
-                self.1 .1.get_cloned(),
-                self.2 .1.get_cloned(),
-                self.3 .1.get_cloned(),
-            )))
-        } else if left_done && left_middle_done && right_middle_done && right_done {
-            Poll::Ready(None)
-        } else {
-            Poll::Pending
-        }
-    }
 }

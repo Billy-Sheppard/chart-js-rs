@@ -4,6 +4,21 @@ use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 
 use crate::{exports::*, FnWithArgsOrAny};
 
+pub fn uncircle_chartjs_value_to_serde_json_value(
+    js: impl AsRef<JsValue>,
+) -> Result<serde_json::Value, String> {
+    // this makes sure we don't get any circular objects, `JsValue` allows this, `serde_json::Value` does not!
+    let blacklist_function =
+        js_sys::Function::new_with_args("key, val", "if (!key.startsWith('$')) { return val; }");
+    let js_string =
+        js_sys::JSON::stringify_with_replacer(js.as_ref(), &JsValue::from(blacklist_function))
+            .map_err(|e| e.as_string().unwrap_or_default())?
+            .as_string()
+            .unwrap();
+
+    serde_json::from_str(&js_string).map_err(|e| e.to_string())
+}
+
 fn rationalise_1_level<const N: usize>(obj: &JsValue, name: &'static str) {
     if let Ok(a) = Reflect::get(obj, &name.into()) {
         // If the property is undefined, dont try serialize it
@@ -167,12 +182,12 @@ impl Chart {
     }
 }
 
-
 #[derive(Debug, Deserialize, Serialize)]
 struct JavascriptFunction {
     args: Vec<String>,
     body: String,
     return_value: String,
+    closure_id: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -180,13 +195,21 @@ pub struct FnWithArgs<const N: usize> {
     pub(crate) args: [String; N],
     pub(crate) body: String,
     pub(crate) return_value: String,
+    pub(crate) closure_id: Option<String>,
 }
 impl<const N: usize> Default for FnWithArgs<N> {
     fn default() -> Self {
         Self {
-            args: [String::new()].into_iter().cycle().take(N).collect::<Vec<_>>().try_into().unwrap(),
+            args: [String::new()]
+                .into_iter()
+                .cycle()
+                .take(N)
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
             body: Default::default(),
             return_value: Default::default(),
+            closure_id: None,
         }
     }
 }
@@ -196,13 +219,14 @@ impl<'de, const N: usize> Deserialize<'de> for FnWithArgs<N> {
         D: serde::Deserializer<'de>,
     {
         let js = JavascriptFunction::deserialize(deserializer)?;
-        Ok(
-            FnWithArgs::<N> {
-                args: js.args.clone().try_into().map_err(|_| de::Error::custom(format!("Array had length {}, needed {}.", js.args.len(), N)))?,
-                body: js.body,
-                return_value: js.return_value,
-            }
-        )
+        Ok(FnWithArgs::<N> {
+            args: js.args.clone().try_into().map_err(|_| {
+                de::Error::custom(format!("Array had length {}, needed {}.", js.args.len(), N))
+            })?,
+            body: js.body,
+            return_value: js.return_value,
+            closure_id: js.closure_id,
+        })
     }
 }
 impl<const N: usize> Serialize for FnWithArgs<N> {
@@ -210,11 +234,15 @@ impl<const N: usize> Serialize for FnWithArgs<N> {
     where
         S: serde::Serializer,
     {
-        JavascriptFunction::serialize(&JavascriptFunction {
-            args: self.args.to_vec(),
-            body: self.body.clone(),
-            return_value: self.return_value.clone(),
-        }, serializer)
+        JavascriptFunction::serialize(
+            &JavascriptFunction {
+                args: self.args.to_vec(),
+                body: self.body.clone(),
+                return_value: self.return_value.clone(),
+                closure_id: self.closure_id.clone(),
+            },
+            serializer,
+        )
     }
 }
 
@@ -227,12 +255,13 @@ impl<const N: usize> FnWithArgs<N> {
         Self::default()
     }
 
-    pub fn args<S: AsRef<str>>(&mut self, args: [S; N]) -> &mut Self {
+    pub fn args<S: AsRef<str>>(mut self, args: [S; N]) -> Self {
         self.args = args.map(|s| s.as_ref().to_string());
         self
     }
 
-    pub fn run_rust_fn<F>(&mut self, in_vars: &[String], out_var: String, _: F) -> Self {
+    #[deprecated(note = "Consider using FnWithArgs::rust_closure()")]
+    pub fn run_rust_fn<F>(mut self, in_vars: &[String], out_var: String, _: F) -> Self {
         self.body = format!(
             "{}\nconst {out_var} = window.callbacks.{}({});",
             self.body,
@@ -247,20 +276,215 @@ impl<const N: usize> FnWithArgs<N> {
         self.to_owned()
     }
 
-    pub fn body(&mut self, body: &str) -> Self {
+    pub fn js_body(mut self, body: &str) -> Self {
         self.body = format!("{}\n{body}", self.body);
         self.to_owned()
     }
 
-    pub fn return_value(&mut self, return_value: &str) -> Self {
+    pub fn js_return_value(mut self, return_value: &str) -> Self {
         self.return_value = return_value.to_string();
         self.to_owned()
     }
 
-    pub fn build(&self) -> Function {
-        Function::new_with_args(
-            &self.args.join(", "),
-            &format!("{{ {}\nreturn {} }}", self.body, self.return_value),
-        )
+    pub fn build(self) -> Function {
+        if let Some(id) = self.closure_id {
+            let args = self.args.join(", ");
+            Function::new_with_args(&args, &format!("{{ return window['{id}']({args}) }}"))
+        } else {
+            Function::new_with_args(
+                &self.args.join(", "),
+                &format!("{{ {}\nreturn {} }}", self.body, self.return_value),
+            )
+        }
+    }
+}
+
+impl FnWithArgs<1> {
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue) -> JsValue + 'static>(mut self, closure: F) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<2> {
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue, JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<3> {
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue, JsValue, JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<4> {
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue, JsValue, JsValue, JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<5> {
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(Box::new(closure)
+            as Box<dyn Fn(JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue>);
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<6> {
+    #[track_caller]
+    pub fn rust_closure<
+        F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static,
+    >(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(Box::new(closure)
+            as Box<dyn Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue>);
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+// 7 is the maximum wasm_bindgen can handle rn AFAIK
+impl FnWithArgs<7> {
+    #[track_caller]
+    pub fn rust_closure<
+        F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static,
+    >(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(Box::new(closure)
+            as Box<
+                dyn Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue,
+            >);
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
     }
 }
