@@ -333,10 +333,10 @@ impl XYDataset {
         Self::default()
     }
 
-    pub fn get_background_color(&mut self) -> &mut FnWithArgsOrAny {
+    pub fn get_background_color(&mut self) -> &mut FnWithArgsOrAny<2> {
         &mut self.backgroundColor
     }
-    pub fn background_color(mut self, value: impl Into<FnWithArgsOrAny>) -> XYDataset {
+    pub fn background_color(mut self, value: impl Into<FnWithArgsOrAny<2>>) -> XYDataset {
         self.backgroundColor = value.into();
         self
     }
@@ -1025,10 +1025,10 @@ impl TooltipPlugin {
         self
     }
 
-    pub fn get_filter(&mut self) -> &mut FnWithArgs {
+    pub fn get_filter(&mut self) -> &mut FnWithArgs<1> {
         &mut self.filter
     }
-    pub fn filter(mut self, value: impl Into<FnWithArgs>) -> TooltipPlugin {
+    pub fn filter(mut self, value: impl Into<FnWithArgs<1>>) -> TooltipPlugin {
         self.filter = value.into();
         self
     }
@@ -1093,18 +1093,18 @@ impl TooltipCallbacks {
         Self::default()
     }
 
-    pub fn get_label(&mut self) -> &mut FnWithArgs {
+    pub fn get_label(&mut self) -> &mut FnWithArgs<1> {
         &mut self.label
     }
-    pub fn label(mut self, value: impl Into<FnWithArgs>) -> TooltipCallbacks {
+    pub fn label(mut self, value: impl Into<FnWithArgs<1>>) -> TooltipCallbacks {
         self.label = value.into();
         self
     }
 
-    pub fn get_title(&mut self) -> &mut FnWithArgs {
+    pub fn get_title(&mut self) -> &mut FnWithArgs<1> {
         &mut self.title
     }
-    pub fn title(mut self, value: impl Into<FnWithArgs>) -> TooltipCallbacks {
+    pub fn title(mut self, value: impl Into<FnWithArgs<1>>) -> TooltipCallbacks {
         self.title = value.into();
         self
     }
@@ -1115,10 +1115,10 @@ impl ChartScale {
         Self::default()
     }
 
-    pub fn get_after_build_ticks(&mut self) -> &mut FnWithArgs {
+    pub fn get_after_build_ticks(&mut self) -> &mut FnWithArgs<1> {
         &mut self.afterBuildTicks
     }
-    pub fn after_build_ticks(mut self, value: impl Into<FnWithArgs>) -> ChartScale {
+    pub fn after_build_ticks(mut self, value: impl Into<FnWithArgs<1>>) -> ChartScale {
         self.afterBuildTicks = value.into();
         self
     }
@@ -1147,10 +1147,10 @@ impl ChartScale {
         self
     }
 
-    pub fn get_before_fit(&mut self) -> &mut FnWithArgs {
+    pub fn get_before_fit(&mut self) -> &mut FnWithArgs<1> {
         &mut self.beforeFit
     }
-    pub fn before_fit(mut self, value: impl Into<FnWithArgs>) -> ChartScale {
+    pub fn before_fit(mut self, value: impl Into<FnWithArgs<1>>) -> ChartScale {
         self.beforeFit = value.into();
         self
     }
@@ -1722,10 +1722,10 @@ impl ScaleTicks {
         self
     }
 
-    pub fn get_callback(&mut self) -> &mut FnWithArgs {
+    pub fn get_callback(&mut self) -> &mut FnWithArgs<3> {
         &mut self.callback
     }
-    pub fn callback(mut self, value: impl Into<FnWithArgs>) -> ScaleTicks {
+    pub fn callback(mut self, value: impl Into<FnWithArgs<3>>) -> ScaleTicks {
         self.callback = value.into();
         self
     }
@@ -1898,10 +1898,10 @@ impl LegendLabel {
         self
     }
 
-    pub fn get_filter(&mut self) -> &mut FnWithArgs {
+    pub fn get_filter(&mut self) -> &mut FnWithArgs<2> {
         &mut self.filter
     }
-    pub fn filter(mut self, value: impl Into<FnWithArgs>) -> LegendLabel {
+    pub fn filter(mut self, value: impl Into<FnWithArgs<2>>) -> LegendLabel {
         self.filter = value.into();
         self
     }
@@ -2102,26 +2102,26 @@ impl DataLabels {
         Self::default()
     }
 
-    pub fn get_align(&mut self) -> &mut FnWithArgsOrAny {
+    pub fn get_align(&mut self) -> &mut FnWithArgsOrAny<1> {
         &mut self.align
     }
-    pub fn align(mut self, value: impl Into<FnWithArgsOrAny>) -> DataLabels {
+    pub fn align(mut self, value: impl Into<FnWithArgsOrAny<1>>) -> DataLabels {
         self.align = value.into();
         self
     }
 
-    pub fn get_anchor(&mut self) -> &mut FnWithArgsOrAny {
+    pub fn get_anchor(&mut self) -> &mut FnWithArgsOrAny<1> {
         &mut self.anchor
     }
-    pub fn anchor(mut self, value: impl Into<FnWithArgsOrAny>) -> DataLabels {
+    pub fn anchor(mut self, value: impl Into<FnWithArgsOrAny<1>>) -> DataLabels {
         self.anchor = value.into();
         self
     }
 
-    pub fn get_background_color(&mut self) -> &mut FnWithArgsOrAny {
+    pub fn get_background_color(&mut self) -> &mut FnWithArgsOrAny<1> {
         &mut self.backgroundColor
     }
-    pub fn background_color(mut self, value: impl Into<FnWithArgsOrAny>) -> DataLabels {
+    pub fn background_color(mut self, value: impl Into<FnWithArgsOrAny<1>>) -> DataLabels {
         self.backgroundColor = value.into();
         self
     }
@@ -2182,18 +2182,18 @@ impl DataLabels {
         self
     }
 
-    pub fn get_formatter(&mut self) -> &mut FnWithArgs {
+    pub fn get_formatter(&mut self) -> &mut FnWithArgs<2> {
         &mut self.formatter
     }
-    pub fn formatter(mut self, value: impl Into<FnWithArgs>) -> DataLabels {
+    pub fn formatter(mut self, value: impl Into<FnWithArgs<2>>) -> DataLabels {
         self.formatter = value.into();
         self
     }
 
-    pub fn get_offset(&mut self) -> &mut FnWithArgsOrAny {
+    pub fn get_offset(&mut self) -> &mut FnWithArgsOrAny<1> {
         &mut self.offset
     }
-    pub fn offset(mut self, value: impl Into<FnWithArgsOrAny>) -> DataLabels {
+    pub fn offset(mut self, value: impl Into<FnWithArgsOrAny<1>>) -> DataLabels {
         self.offset = value.into();
         self
     }
@@ -2350,18 +2350,18 @@ impl Segment {
         Self::default()
     }
 
-    pub fn get_border_color(&mut self) -> &mut FnWithArgs {
+    pub fn get_border_color(&mut self) -> &mut FnWithArgs<1> {
         &mut self.borderColor
     }
-    pub fn border_color(mut self, value: impl Into<FnWithArgs>) -> Segment {
+    pub fn border_color(mut self, value: impl Into<FnWithArgs<1>>) -> Segment {
         self.borderColor = value.into();
         self
     }
 
-    pub fn get_border_dash(&mut self) -> &mut FnWithArgs {
+    pub fn get_border_dash(&mut self) -> &mut FnWithArgs<1> {
         &mut self.borderDash
     }
-    pub fn border_dash(mut self, value: impl Into<FnWithArgs>) -> Segment {
+    pub fn border_dash(mut self, value: impl Into<FnWithArgs<1>>) -> Segment {
         self.borderDash = value.into();
         self
     }

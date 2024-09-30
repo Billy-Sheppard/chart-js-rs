@@ -150,10 +150,10 @@ impl Model {
                         .dataset_type("line")
                         .segment(
                             Segment::new()
-                                .border_dash(FnWithArgs::new().arg("ctx").return_value(
+                                .border_dash(FnWithArgs::new().args(["ctx"]).return_value(
                                     "ctx.p0.skip || ctx.p1.skip ? [2, 2] : undefined",
                                 ))
-                                .border_color(FnWithArgs::new().arg("ctx").return_value(
+                                .border_color(FnWithArgs::new().args(["ctx"]).return_value(
                                     "ctx.p0.skip || ctx.p1.skip ? 'lightgrey' : (ctx.p0.parsed.y > ctx.p1.parsed.y) ? 'firebrick' : 'green'"
                                 )),
                         ),
@@ -173,7 +173,7 @@ impl Model {
                         ChartScale::new()
                             .scale_type("linear")
                             .ticks(ScaleTicks::new().callback(
-                                FnWithArgs::new().arg("value").arg("index").return_value(
+                                FnWithArgs::new().args(["value", "index", "ticks"]).return_value(
                                     "index % 2 === 0 ? this.getLabelForValue(value) : ''",
                                 ),
                             )),

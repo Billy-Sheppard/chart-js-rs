@@ -89,7 +89,7 @@ pub struct SinglePointDataset {
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct XYDataset {
     #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub(crate) backgroundColor: FnWithArgsOrAny,
+    pub(crate) backgroundColor: FnWithArgsOrAny<2>,
     #[serde(
         skip_serializing_if = "Vec::is_empty",
         default,
@@ -287,7 +287,7 @@ pub struct TooltipPlugin {
     pub(crate) callbacks: Option<TooltipCallbacks>,
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub(crate) filter: FnWithArgs,
+    pub(crate) filter: FnWithArgs<1>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) displayColors: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -310,17 +310,17 @@ pub struct ChartLayout {
 pub struct TooltipCallbacks {
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub(crate) label: FnWithArgs,
+    pub(crate) label: FnWithArgs<1>,
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub(crate) title: FnWithArgs,
+    pub(crate) title: FnWithArgs<1>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ChartScale {
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub(crate) afterBuildTicks: FnWithArgs,
+    pub(crate) afterBuildTicks: FnWithArgs<1>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) alignToPixels: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
@@ -329,7 +329,7 @@ pub struct ChartScale {
     pub(crate) barPercentage: NumberString,
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub(crate) beforeFit: FnWithArgs,
+    pub(crate) beforeFit: FnWithArgs<1>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) beginAtZero: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -495,7 +495,7 @@ pub struct ScaleTicks {
         default,
         skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     )]
-    pub(crate) callback: FnWithArgs,
+    pub(crate) callback: FnWithArgs<3>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) count: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -551,7 +551,7 @@ pub struct LegendLabel {
     pub(crate) boxWidth: Option<usize>,
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub(crate) filter: FnWithArgs,
+    pub(crate) filter: FnWithArgs<2>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) font: Option<Font>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
@@ -613,11 +613,11 @@ pub struct PointElementConfiguration {
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DataLabels {
     #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub(crate) align: FnWithArgsOrAny,
+    pub(crate) align: FnWithArgsOrAny<1>,
     #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub(crate) anchor: FnWithArgsOrAny,
+    pub(crate) anchor: FnWithArgsOrAny<1>,
     #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub(crate) backgroundColor: FnWithArgsOrAny,
+    pub(crate) backgroundColor: FnWithArgsOrAny<1>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) borderRadius: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -634,10 +634,10 @@ pub struct DataLabels {
     pub(crate) font: Option<Font>,
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub(crate) formatter: FnWithArgs,
+    pub(crate) formatter: FnWithArgs<2>,
     #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub(crate) offset: FnWithArgsOrAny,
+    pub(crate) offset: FnWithArgsOrAny<1>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) opacity: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -690,13 +690,13 @@ pub struct Segment {
         default,
         skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     )]
-    pub(crate) borderColor: FnWithArgs,
+    pub(crate) borderColor: FnWithArgs<1>,
     #[serde(
         skip_serializing_if = "FnWithArgs::is_empty",
         default,
         skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     )]
-    pub(crate) borderDash: FnWithArgs,
+    pub(crate) borderDash: FnWithArgs<1>,
 }
 
 //

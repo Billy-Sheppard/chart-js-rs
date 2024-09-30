@@ -226,11 +226,11 @@ impl<'de> Deserialize<'de> for BoolString {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum FnWithArgsOrAny {
+pub enum FnWithArgsOrAny<const N: usize> {
     Any(Any),
-    FnWithArgs(FnWithArgs),
+    FnWithArgs(FnWithArgs<N>),
 }
-impl FnWithArgsOrAny {
+impl<const N: usize> FnWithArgsOrAny<N> {
     pub fn is_empty(&self) -> bool {
         match self {
             FnWithArgsOrAny::Any(a) => a.is_empty(),
@@ -238,18 +238,18 @@ impl FnWithArgsOrAny {
         }
     }
 }
-impl Default for FnWithArgsOrAny {
+impl<const N: usize> Default for FnWithArgsOrAny<N> {
     fn default() -> Self {
         FnWithArgsOrAny::Any(Any::from(false))
     }
 }
-impl<T: Display> From<T> for FnWithArgsOrAny {
+impl<const N: usize, T: Display> From<T> for FnWithArgsOrAny<N> {
     fn from(s: T) -> Self {
         Self::Any(s.to_string().into())
     }
 }
-impl From<FnWithArgs> for FnWithArgsOrAny {
-    fn from(value: FnWithArgs) -> Self {
+impl<const N: usize> From<FnWithArgs<N>> for FnWithArgsOrAny<N> {
+    fn from(value: FnWithArgs<N>) -> Self {
         Self::FnWithArgs(value)
     }
 }

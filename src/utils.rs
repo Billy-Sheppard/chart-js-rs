@@ -1,17 +1,17 @@
 use js_sys::{Array, Function, Object, Reflect};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 
 use crate::{exports::*, FnWithArgsOrAny};
 
-fn rationalise_1(obj: &JsValue, name: &'static str) {
+fn rationalise_1_level<const N: usize>(obj: &JsValue, name: &'static str) {
     if let Ok(a) = Reflect::get(obj, &name.into()) {
         // If the property is undefined, dont try serialize it
         if a == JsValue::UNDEFINED {
             return;
         }
 
-        if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrAny>(a) {
+        if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrAny<N>>(a) {
             match o {
                 FnWithArgsOrAny::Any(_) => (),
                 FnWithArgsOrAny::FnWithArgs(fnwa) => {
@@ -21,7 +21,7 @@ fn rationalise_1(obj: &JsValue, name: &'static str) {
         }
     }
 }
-fn rationalise_2(obj: &JsValue, name: (&'static str, &'static str)) {
+fn rationalise_2_levels<const N: usize>(obj: &JsValue, name: (&'static str, &'static str)) {
     if let Ok(a) = Reflect::get(obj, &name.0.into()) {
         // If the property is undefined, dont try serialize it
         if a == JsValue::UNDEFINED {
@@ -34,7 +34,7 @@ fn rationalise_2(obj: &JsValue, name: (&'static str, &'static str)) {
                 return;
             }
 
-            if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrAny>(b) {
+            if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrAny<N>>(b) {
                 match o {
                     FnWithArgsOrAny::Any(_) => (),
                     FnWithArgsOrAny::FnWithArgs(fnwa) => {
@@ -134,14 +134,14 @@ impl Chart {
         Array::from(&get_path(&self.obj, "data.datasets").unwrap())
             .iter()
             .for_each(|dataset| {
-                rationalise_1(&dataset, "backgroundColor");
-                rationalise_2(&dataset, ("segment", "borderDash"));
-                rationalise_2(&dataset, ("segment", "borderColor"));
-                rationalise_2(&dataset, ("datalabels", "align"));
-                rationalise_2(&dataset, ("datalabels", "anchor"));
-                rationalise_2(&dataset, ("datalabels", "backgroundColor"));
-                rationalise_2(&dataset, ("datalabels", "formatter"));
-                rationalise_2(&dataset, ("datalabels", "offset"));
+                rationalise_1_level::<2>(&dataset, "backgroundColor");
+                rationalise_2_levels::<1>(&dataset, ("segment", "borderDash"));
+                rationalise_2_levels::<1>(&dataset, ("segment", "borderColor"));
+                rationalise_2_levels::<1>(&dataset, ("datalabels", "align"));
+                rationalise_2_levels::<1>(&dataset, ("datalabels", "anchor"));
+                rationalise_2_levels::<1>(&dataset, ("datalabels", "backgroundColor"));
+                rationalise_2_levels::<1>(&dataset, ("datalabels", "formatter"));
+                rationalise_2_levels::<1>(&dataset, ("datalabels", "offset"));
             });
 
         // Handle options.scales
@@ -149,32 +149,76 @@ impl Chart {
             Object::values(&scales.dyn_into().unwrap())
                 .iter()
                 .for_each(|scale| {
-                    rationalise_2(&scale, ("ticks", "callback"));
+                    rationalise_2_levels::<3>(&scale, ("ticks", "callback"));
                 });
         }
 
         // Handle options.plugins.legend
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.legend") {
-            rationalise_2(&legend, ("labels", "filter"));
+            rationalise_2_levels::<2>(&legend, ("labels", "filter"));
         }
 
         // Handle options.plugins.tooltip
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.tooltip") {
-            rationalise_1(&legend, "filter");
-            rationalise_2(&legend, ("callbacks", "label"));
-            rationalise_2(&legend, ("callbacks", "title"));
+            rationalise_1_level::<1>(&legend, "filter");
+            rationalise_2_levels::<1>(&legend, ("callbacks", "label"));
+            rationalise_2_levels::<1>(&legend, ("callbacks", "title"));
         }
     }
 }
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct FnWithArgs {
-    pub(crate) args: Vec<String>,
+
+#[derive(Debug, Deserialize, Serialize)]
+struct JavascriptFunction {
+    args: Vec<String>,
+    body: String,
+    return_value: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FnWithArgs<const N: usize> {
+    pub(crate) args: [String; N],
     pub(crate) body: String,
     pub(crate) return_value: String,
 }
+impl<const N: usize> Default for FnWithArgs<N> {
+    fn default() -> Self {
+        Self {
+            args: [String::new()].into_iter().cycle().take(N).collect::<Vec<_>>().try_into().unwrap(),
+            body: Default::default(),
+            return_value: Default::default(),
+        }
+    }
+}
+impl<'de, const N: usize> Deserialize<'de> for FnWithArgs<N> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let js = JavascriptFunction::deserialize(deserializer)?;
+        Ok(
+            FnWithArgs::<N> {
+                args: js.args.clone().try_into().map_err(|_| de::Error::custom(format!("Array had length {}, needed {}.", js.args.len(), N)))?,
+                body: js.body,
+                return_value: js.return_value,
+            }
+        )
+    }
+}
+impl<const N: usize> Serialize for FnWithArgs<N> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        JavascriptFunction::serialize(&JavascriptFunction {
+            args: self.args.to_vec(),
+            body: self.body.clone(),
+            return_value: self.return_value.clone(),
+        }, serializer)
+    }
+}
 
-impl FnWithArgs {
+impl<const N: usize> FnWithArgs<N> {
     pub fn is_empty(&self) -> bool {
         self.args.is_empty() && self.body.is_empty()
     }
@@ -183,13 +227,8 @@ impl FnWithArgs {
         Self::default()
     }
 
-    pub fn arg(&mut self, name: &str) -> &mut Self {
-        self.args.push(name.to_string());
-        self
-    }
-
-    pub fn args(&mut self, args: &[String]) -> &mut Self {
-        self.args = args.into();
+    pub fn args<S: AsRef<str>>(&mut self, args: [S; N]) -> &mut Self {
+        self.args = args.map(|s| s.as_ref().to_string());
         self
     }
 
