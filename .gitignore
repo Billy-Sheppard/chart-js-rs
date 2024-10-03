@@ -4,3 +4,4 @@ node_modules/
 # Added by cargo
 
 target
+build_logs.txt

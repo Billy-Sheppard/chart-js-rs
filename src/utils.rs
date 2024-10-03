@@ -1,25 +1,42 @@
 use js_sys::{Array, Function, Object, Reflect};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 
 use crate::{exports::*, FnWithArgsOrAny};
 
-fn rationalise_1(obj: &JsValue, name: &'static str) {
+pub fn uncircle_chartjs_value_to_serde_json_value(
+    js: impl AsRef<JsValue>,
+) -> Result<serde_json::Value, String> {
+    // this makes sure we don't get any circular objects, `JsValue` allows this, `serde_json::Value` does not!
+    let blacklist_function =
+        js_sys::Function::new_with_args("key, val", "if (!key.startsWith('$')) { return val; }");
+    let js_string =
+        js_sys::JSON::stringify_with_replacer(js.as_ref(), &JsValue::from(blacklist_function))
+            .map_err(|e| e.as_string().unwrap_or_default())?
+            .as_string()
+            .unwrap();
+
+    serde_json::from_str(&js_string).map_err(|e| e.to_string())
+}
+
+fn rationalise_1_level<const N: usize>(obj: &JsValue, name: &'static str) {
     if let Ok(a) = Reflect::get(obj, &name.into()) {
         // If the property is undefined, dont try serialize it
         if a == JsValue::UNDEFINED {
             return;
         }
 
-        match serde_wasm_bindgen::from_value::<FnWithArgsOrAny>(a).unwrap() {
-            FnWithArgsOrAny::Any(_) => (),
-            FnWithArgsOrAny::FnWithArgs(fnwa) => {
-                Reflect::set(obj, &name.into(), &fnwa.build()).unwrap();
+        if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrAny<N>>(a) {
+            match o {
+                FnWithArgsOrAny::Any(_) => (),
+                FnWithArgsOrAny::FnWithArgs(fnwa) => {
+                    let _ = Reflect::set(obj, &name.into(), &fnwa.build());
+                }
             }
         }
     }
 }
-fn rationalise_2(obj: &JsValue, name: (&'static str, &'static str)) {
+fn rationalise_2_levels<const N: usize>(obj: &JsValue, name: (&'static str, &'static str)) {
     if let Ok(a) = Reflect::get(obj, &name.0.into()) {
         // If the property is undefined, dont try serialize it
         if a == JsValue::UNDEFINED {
@@ -32,10 +49,12 @@ fn rationalise_2(obj: &JsValue, name: (&'static str, &'static str)) {
                 return;
             }
 
-            match serde_wasm_bindgen::from_value::<FnWithArgsOrAny>(b).unwrap() {
-                FnWithArgsOrAny::Any(_) => (),
-                FnWithArgsOrAny::FnWithArgs(fnwa) => {
-                    Reflect::set(&a, &name.1.into(), &fnwa.build()).unwrap();
+            if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrAny<N>>(b) {
+                match o {
+                    FnWithArgsOrAny::Any(_) => (),
+                    FnWithArgsOrAny::FnWithArgs(fnwa) => {
+                        let _ = Reflect::set(&a, &name.1.into(), &fnwa.build());
+                    }
                 }
             }
         }
@@ -130,14 +149,14 @@ impl Chart {
         Array::from(&get_path(&self.obj, "data.datasets").unwrap())
             .iter()
             .for_each(|dataset| {
-                rationalise_1(&dataset, "backgroundColor");
-                rationalise_2(&dataset, ("segment", "borderDash"));
-                rationalise_2(&dataset, ("segment", "borderColor"));
-                rationalise_2(&dataset, ("datalabels", "align"));
-                rationalise_2(&dataset, ("datalabels", "anchor"));
-                rationalise_2(&dataset, ("datalabels", "backgroundColor"));
-                rationalise_2(&dataset, ("datalabels", "formatter"));
-                rationalise_2(&dataset, ("datalabels", "offset"));
+                rationalise_1_level::<2>(&dataset, "backgroundColor");
+                rationalise_2_levels::<1>(&dataset, ("segment", "borderDash"));
+                rationalise_2_levels::<1>(&dataset, ("segment", "borderColor"));
+                rationalise_2_levels::<1>(&dataset, ("datalabels", "align"));
+                rationalise_2_levels::<1>(&dataset, ("datalabels", "anchor"));
+                rationalise_2_levels::<1>(&dataset, ("datalabels", "backgroundColor"));
+                rationalise_2_levels::<1>(&dataset, ("datalabels", "formatter"));
+                rationalise_2_levels::<1>(&dataset, ("datalabels", "offset"));
             });
 
         // Handle options.scales
@@ -145,32 +164,89 @@ impl Chart {
             Object::values(&scales.dyn_into().unwrap())
                 .iter()
                 .for_each(|scale| {
-                    rationalise_2(&scale, ("ticks", "callback"));
+                    rationalise_2_levels::<3>(&scale, ("ticks", "callback"));
                 });
         }
 
         // Handle options.plugins.legend
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.legend") {
-            rationalise_2(&legend, ("labels", "filter"));
+            rationalise_2_levels::<2>(&legend, ("labels", "filter"));
         }
 
         // Handle options.plugins.tooltip
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.tooltip") {
-            rationalise_1(&legend, "filter");
-            rationalise_2(&legend, ("callbacks", "label"));
-            rationalise_2(&legend, ("callbacks", "title"));
+            rationalise_1_level::<1>(&legend, "filter");
+            rationalise_2_levels::<1>(&legend, ("callbacks", "label"));
+            rationalise_2_levels::<1>(&legend, ("callbacks", "title"));
         }
     }
 }
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct FnWithArgs {
-    pub(crate) args: Vec<String>,
-    pub(crate) body: String,
-    pub(crate) return_value: String,
+#[derive(Debug, Deserialize, Serialize)]
+struct JavascriptFunction {
+    args: Vec<String>,
+    body: String,
+    return_value: String,
+    closure_id: Option<String>,
 }
 
-impl FnWithArgs {
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FnWithArgs<const N: usize> {
+    pub(crate) args: [String; N],
+    pub(crate) body: String,
+    pub(crate) return_value: String,
+    pub(crate) closure_id: Option<String>,
+}
+impl<const N: usize> Default for FnWithArgs<N> {
+    fn default() -> Self {
+        Self {
+            args: [String::new()]
+                .into_iter()
+                .cycle()
+                .take(N)
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
+            body: Default::default(),
+            return_value: Default::default(),
+            closure_id: None,
+        }
+    }
+}
+impl<'de, const N: usize> Deserialize<'de> for FnWithArgs<N> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let js = JavascriptFunction::deserialize(deserializer)?;
+        Ok(FnWithArgs::<N> {
+            args: js.args.clone().try_into().map_err(|_| {
+                de::Error::custom(format!("Array had length {}, needed {}.", js.args.len(), N))
+            })?,
+            body: js.body,
+            return_value: js.return_value,
+            closure_id: js.closure_id,
+        })
+    }
+}
+impl<const N: usize> Serialize for FnWithArgs<N> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        JavascriptFunction::serialize(
+            &JavascriptFunction {
+                args: self.args.to_vec(),
+                body: self.body.clone(),
+                return_value: self.return_value.clone(),
+                closure_id: self.closure_id.clone(),
+            },
+            serializer,
+        )
+    }
+}
+
+impl<const N: usize> FnWithArgs<N> {
     pub fn is_empty(&self) -> bool {
         self.args.is_empty() && self.body.is_empty()
     }
@@ -179,17 +255,13 @@ impl FnWithArgs {
         Self::default()
     }
 
-    pub fn arg(&mut self, name: &str) -> &mut Self {
-        self.args.push(name.to_string());
+    pub fn args<S: AsRef<str>>(mut self, args: [S; N]) -> Self {
+        self.args = args.map(|s| s.as_ref().to_string());
         self
     }
 
-    pub fn args(&mut self, args: &[String]) -> &mut Self {
-        self.args = args.into();
-        self
-    }
-
-    pub fn run_rust_fn<F>(&mut self, in_vars: &[String], out_var: String, _: F) -> Self {
+    #[deprecated(note = "Consider using FnWithArgs::rust_closure()")]
+    pub fn run_rust_fn<F>(mut self, in_vars: &[String], out_var: String, _: F) -> Self {
         self.body = format!(
             "{}\nconst {out_var} = window.callbacks.{}({});",
             self.body,
@@ -204,20 +276,215 @@ impl FnWithArgs {
         self.to_owned()
     }
 
-    pub fn body(&mut self, body: &str) -> Self {
+    pub fn js_body(mut self, body: &str) -> Self {
         self.body = format!("{}\n{body}", self.body);
         self.to_owned()
     }
 
-    pub fn return_value(&mut self, return_value: &str) -> Self {
+    pub fn js_return_value(mut self, return_value: &str) -> Self {
         self.return_value = return_value.to_string();
         self.to_owned()
     }
 
-    pub fn build(&self) -> Function {
-        Function::new_with_args(
-            &self.args.join(", "),
-            &format!("{{ {}\nreturn {} }}", self.body, self.return_value),
-        )
+    pub fn build(self) -> Function {
+        if let Some(id) = self.closure_id {
+            let args = self.args.join(", ");
+            Function::new_with_args(&args, &format!("{{ return window['{id}']({args}) }}"))
+        } else {
+            Function::new_with_args(
+                &self.args.join(", "),
+                &format!("{{ {}\nreturn {} }}", self.body, self.return_value),
+            )
+        }
+    }
+}
+
+impl FnWithArgs<1> {
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue) -> JsValue + 'static>(mut self, closure: F) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<2> {
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue, JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<3> {
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue, JsValue, JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<4> {
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue, JsValue, JsValue, JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<5> {
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(Box::new(closure)
+            as Box<dyn Fn(JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue>);
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<6> {
+    #[track_caller]
+    pub fn rust_closure<
+        F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static,
+    >(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(Box::new(closure)
+            as Box<dyn Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue>);
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+// 7 is the maximum wasm_bindgen can handle rn AFAIK
+impl FnWithArgs<7> {
+    #[track_caller]
+    pub fn rust_closure<
+        F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static,
+    >(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(Box::new(closure)
+            as Box<
+                dyn Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue,
+            >);
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
     }
 }

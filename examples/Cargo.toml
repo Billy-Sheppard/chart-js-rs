@@ -8,15 +8,16 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+chart-js-rs = { path = "../" }
+console_error_panic_hook = { version = "*", default-features = false }
 dominator = { version = "*", default-features = false }
+futures-signals = { version = "*", default-features = false }
+getrandom = { version = "*", features = ["js"] }
+gloo = { version = "*" }
+itertools = "*"
+js-sys = { version = "*", default-features = false }
+rand = { version = "*" }
+serde_json = "*"
 wasm-bindgen = { version = "*" }
 wasm-bindgen-futures = { version = "*", default-features = false }
 web-sys = { version = "*", default-features = false }
-js-sys = { version = "*", default-features = false }
-futures-signals = { version = "*", default-features = false }
-gloo = { version = "*" }
-console_error_panic_hook = { version = "*", default-features = false }
-rand = { version = "*" }
-getrandom = { version = "*", features = ["js"] }
-chart-js-rs = { path = "../" }
-itertools = "*"

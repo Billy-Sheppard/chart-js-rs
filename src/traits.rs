@@ -1,9 +1,9 @@
-use crate::types::*;
+use crate::objects::*;
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::*;
 
-pub trait DatasetTrait: Serialize {}
+pub trait DatasetTrait: Serialize + Default {}
 pub trait DatasetDataExt {
     fn presorted_to_dataset_data(self) -> DatasetData;
     fn unsorted_to_dataset_data(self) -> DatasetData;
@@ -46,4 +46,4 @@ pub trait DatasetIterExt: Iterator {
 }
 impl<T> DatasetIterExt for T where T: Iterator + ?Sized {}
 
-pub trait Annotation: Serialize {}
+pub trait Annotation: Serialize + Default {}
