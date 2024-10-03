@@ -224,6 +224,17 @@ fn override_set_fn(s: &ItemStruct, field: &Field) -> Option<TokenStream> {
                 };
                 return Some(iterator_set_fn);
             }
+
+            if type_segments[1].0 == "u32" {
+                let type_ = &type_segments[1].1;
+
+                return Some(quote! {
+                    pub fn #set_name(mut self, value: #type_) -> #s_name #type_params {
+                        self.#name = Some(value);
+                        self
+                    }
+                })
+            }
         }
     }
 

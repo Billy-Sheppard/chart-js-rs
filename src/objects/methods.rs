@@ -1882,19 +1882,19 @@ impl LegendLabel {
         Self::default()
     }
 
-    pub fn get_box_height(&mut self) -> &mut Option<usize> {
+    pub fn get_box_height(&mut self) -> &mut Option<u32> {
         &mut self.boxHeight
     }
-    pub fn box_height(mut self, value: impl Into<usize>) -> LegendLabel {
-        self.boxHeight = Some(value.into());
+    pub fn box_height(mut self, value: u32) -> LegendLabel {
+        self.boxHeight = Some(value);
         self
     }
 
-    pub fn get_box_width(&mut self) -> &mut Option<usize> {
+    pub fn get_box_width(&mut self) -> &mut Option<u32> {
         &mut self.boxWidth
     }
-    pub fn box_width(mut self, value: impl Into<usize>) -> LegendLabel {
-        self.boxWidth = Some(value.into());
+    pub fn box_width(mut self, value: u32) -> LegendLabel {
+        self.boxWidth = Some(value);
         self
     }
 

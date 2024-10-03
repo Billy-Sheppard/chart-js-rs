@@ -546,9 +546,9 @@ pub struct ChartLegend {
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LegendLabel {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) boxHeight: Option<usize>,
+    pub(crate) boxHeight: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) boxWidth: Option<usize>,
+    pub(crate) boxWidth: Option<u32>,
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub(crate) filter: FnWithArgs<2>,
