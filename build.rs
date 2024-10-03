@@ -233,7 +233,7 @@ fn override_set_fn(s: &ItemStruct, field: &Field) -> Option<TokenStream> {
                         self.#name = Some(value);
                         self
                     }
-                })
+                });
             }
         }
     }
