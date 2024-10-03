@@ -9,14 +9,13 @@ use quote::{quote, ToTokens};
 use syn::{Field, ItemStruct};
 
 fn main() {
-    std::fs::write("build_logs.txt", "").unwrap();
+    // std::fs::write("build_logs.txt", "").unwrap();
 
     let objects = std::fs::read_to_string("./src/objects/chart_objects.rs").unwrap();
 
     let symbols = syn::parse_file(&objects).unwrap();
 
     let use_ = quote! {
-        #![allow(clippy::default_constructed_unit_structs)]
         '\n'
         use {
             super::{
@@ -100,7 +99,7 @@ fn main() {
                                 type_vec.push(s);
                             }
                         }
-                        append_log(type_vec.clone().into_iter().join(""));
+                        // append_log(type_vec.clone().into_iter().join(""));
                         let type_ = ident(&type_vec.into_iter().join("")).unwrap().to_token_stream();
 
                         quote!{
@@ -164,7 +163,7 @@ fn main() {
         .map(|mut s| s.write_all(code.as_bytes()));
 
     std::fs::write(
-        "./src/objects/methods.rs",
+        format!("{}/{}", std::env::var("OUT_DIR").unwrap(), "methods.rs"),
         String::from_utf8_lossy(&formatted_code.wait_with_output().unwrap().stdout).to_string(),
     )
     .unwrap();
@@ -243,7 +242,7 @@ fn override_set_fn(s: &ItemStruct, field: &Field) -> Option<TokenStream> {
 
 fn type_segments(type_: &syn::Type) -> (Vec<(String, syn::Type)>, Vec<String>) {
     let type_segments = type_.to_token_stream().to_string();
-    append_log(&type_segments);
+    // append_log(&type_segments);
     let segs = type_segments
         .split("<")
         .flat_map(|seg| seg.split(","))
@@ -277,7 +276,7 @@ fn type_segments(type_: &syn::Type) -> (Vec<(String, syn::Type)>, Vec<String>) {
             acc
         });
 
-    append_log(&seps);
+    // append_log(&seps);
 
     (segs, seps)
 }
@@ -286,12 +285,12 @@ fn ident(i: &str) -> Result<syn::Type, syn::Error> {
     syn::parse_str(i)
 }
 
-fn append_log(s: impl Debug) {
-    let mut file = std::fs::OpenOptions::new()
-        .append(true)
-        .open("build_logs.txt")
-        .unwrap();
+// fn append_log(s: impl Debug) {
+//     let mut file = std::fs::OpenOptions::new()
+//         .append(true)
+//         .open("build_logs.txt")
+//         .unwrap();
 
-    file.write_all(format!("{:#?}", s).as_bytes()).unwrap();
-    file.write_all(b"\n").unwrap();
-}
+//     file.write_all(format!("{:#?}", s).as_bytes()).unwrap();
+//     file.write_all(b"\n").unwrap();
+// }
