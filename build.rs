@@ -1,6 +1,6 @@
 #![allow(clippy::ptr_arg, clippy::collapsible_if)]
 
-use std::{fmt::Debug, io::Write, ops::Not};
+use std::{io::Write, ops::Not};
 
 use heck::ToSnakeCase;
 use itertools::Itertools;
@@ -285,7 +285,7 @@ fn ident(i: &str) -> Result<syn::Type, syn::Error> {
     syn::parse_str(i)
 }
 
-// fn append_log(s: impl Debug) {
+// fn append_log(s: impl std::fmt::Debug) {
 //     let mut file = std::fs::OpenOptions::new()
 //         .append(true)
 //         .open("build_logs.txt")

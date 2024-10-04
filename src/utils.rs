@@ -158,7 +158,7 @@ impl Chart {
                 rationalise_2_levels::<1>(&dataset, ("datalabels", "formatter"));
                 rationalise_2_levels::<1>(&dataset, ("datalabels", "offset"));
             });
-
+            
         // Handle options.scales
         if let Some(scales) = object_values_at(&self.obj, "options.scales") {
             Object::values(&scales.dyn_into().unwrap())
@@ -166,13 +166,12 @@ impl Chart {
                 .for_each(|scale| {
                     rationalise_2_levels::<3>(&scale, ("ticks", "callback"));
                 });
-        }
-
+        } 
+        
         // Handle options.plugins.legend
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.legend") {
             rationalise_2_levels::<2>(&legend, ("labels", "filter"));
         }
-
         // Handle options.plugins.tooltip
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.tooltip") {
             rationalise_1_level::<1>(&legend, "filter");
@@ -248,7 +247,8 @@ impl<const N: usize> Serialize for FnWithArgs<N> {
 
 impl<const N: usize> FnWithArgs<N> {
     pub fn is_empty(&self) -> bool {
-        self.args.is_empty() && self.body.is_empty()
+        self.args.iter().any(|arg| arg.is_empty()) || (
+        self.args.is_empty() && self.body.is_empty())
     }
 
     pub fn new() -> Self {
