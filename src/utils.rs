@@ -196,13 +196,15 @@ pub struct FnWithArgs<const N: usize> {
     pub(crate) return_value: String,
     pub(crate) closure_id: Option<String>,
 }
+const ALPHABET: [&str; 32] = [
+    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
+    "t", "u", "v", "w", "x", "y", "z", "aa", "bb", "cc", "dd", "ee", "ff",
+];
 impl<const N: usize> Default for FnWithArgs<N> {
     fn default() -> Self {
         Self {
-            args: [String::new()]
-                .into_iter()
-                .cycle()
-                .take(N)
+            args: (0..N)
+                .map(|idx| ALPHABET[idx].to_string())
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
@@ -255,24 +257,17 @@ impl<const N: usize> FnWithArgs<N> {
     }
 
     pub fn args<S: AsRef<str>>(mut self, args: [S; N]) -> Self {
-        self.args = args.map(|s| s.as_ref().to_string());
+        self.args = args
+            .into_iter()
+            .enumerate()
+            .map(|(idx, s)| {
+                let arg = s.as_ref();
+                if arg.is_empty() { ALPHABET[idx] } else { arg }.to_string()
+            })
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap();
         self
-    }
-
-    #[deprecated(note = "Consider using FnWithArgs::rust_closure()")]
-    pub fn run_rust_fn<F>(mut self, in_vars: &[String], out_var: String, _: F) -> Self {
-        self.body = format!(
-            "{}\nconst {out_var} = window.callbacks.{}({});",
-            self.body,
-            std::any::type_name::<F>()
-                .split("::")
-                .collect::<Vec<_>>()
-                .into_iter()
-                .next_back()
-                .unwrap(),
-            in_vars.join(", ")
-        );
-        self.to_owned()
     }
 
     pub fn js_body(mut self, body: &str) -> Self {
@@ -299,6 +294,23 @@ impl<const N: usize> FnWithArgs<N> {
 }
 
 impl FnWithArgs<1> {
+    pub fn run_rust_fn<A, B, FN: Fn(A) -> B>(mut self, _func: FN) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
     #[track_caller]
     pub fn rust_closure<F: Fn(JsValue) -> JsValue + 'static>(mut self, closure: F) -> Self {
         let js_closure = wasm_bindgen::closure::Closure::wrap(
@@ -323,6 +335,23 @@ impl FnWithArgs<1> {
 }
 
 impl FnWithArgs<2> {
+    pub fn run_rust_fn<A, B, C, FN: Fn(A, B) -> C>(mut self, _func: FN) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
     #[track_caller]
     pub fn rust_closure<F: Fn(JsValue, JsValue) -> JsValue + 'static>(
         mut self,
@@ -350,6 +379,23 @@ impl FnWithArgs<2> {
 }
 
 impl FnWithArgs<3> {
+    pub fn run_rust_fn<A, B, C, D, FN: Fn(A, B, C) -> D>(mut self, _func: FN) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
     #[track_caller]
     pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue) -> JsValue + 'static>(
         mut self,
@@ -377,6 +423,23 @@ impl FnWithArgs<3> {
 }
 
 impl FnWithArgs<4> {
+    pub fn run_rust_fn<A, B, C, D, E, FN: Fn(A, B, C, D) -> E>(mut self, _func: FN) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
     #[track_caller]
     pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static>(
         mut self,
@@ -404,6 +467,23 @@ impl FnWithArgs<4> {
 }
 
 impl FnWithArgs<5> {
+    pub fn run_rust_fn<A, B, C, D, E, F, FN: Fn(A, B, C, D, E) -> F>(mut self, _func: FN) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
     #[track_caller]
     pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static>(
         mut self,
@@ -430,6 +510,26 @@ impl FnWithArgs<5> {
 }
 
 impl FnWithArgs<6> {
+    pub fn run_rust_fn<A, B, C, D, E, F, G, FN: Fn(A, B, C, D, E, F) -> G>(
+        mut self,
+        _func: FN,
+    ) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
     #[track_caller]
     pub fn rust_closure<
         F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static,
@@ -459,6 +559,26 @@ impl FnWithArgs<6> {
 
 // 7 is the maximum wasm_bindgen can handle rn AFAIK
 impl FnWithArgs<7> {
+    pub fn run_rust_fn<A, B, C, D, E, F, G, H, FN: Fn(A, B, C, D, E, F, G) -> H>(
+        mut self,
+        _func: FN,
+    ) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
     #[track_caller]
     pub fn rust_closure<
         F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static,

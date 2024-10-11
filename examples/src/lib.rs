@@ -197,16 +197,16 @@ impl Model {
                         "x",
                         ChartScale::new().scale_type("linear").ticks(
                             ScaleTicks::new().callback(
-                                FnWithArgs::new()
-                                    .args(["value", "index", "ticks"])
-                                    .js_body(
-                                        "if (index % 2 === 0) {
-                                            var out = this.getLabelForValue(value)
-                                        } else {
-                                            var out = ''
-                                        };",
-                                    )
-                                    .js_return_value("out"),
+                                // we can call rust functions in callbacks
+                                FnWithArgs::<3>::new()
+                                    // we can override any arguments going in, in this case we must as rust cannot handle `this`.
+                                    // Note: if you don't define your variables with ``.args([..])`, they get the default label of the letter of the alphabet they're the index of
+                                    //       1st arg: `a`
+                                    //       2nd arg: `b`
+                                    //       ...
+                                    .js_body("var a = this.getLabelForValue(value);")
+                                    // function pointer goes here - note that the count of arguments must equal the const param (3 in this case)
+                                    .run_rust_fn(show_line_ticks),
                             ),
                         ),
                     )])
@@ -488,6 +488,15 @@ impl Model {
                 })
             )
         })
+    }
+}
+
+#[wasm_bindgen]
+pub fn show_line_ticks(this: String, index: u32, _ticks: JsValue) -> String {
+    if index % 2 == 0 {
+        this
+    } else {
+        String::new()
     }
 }
 

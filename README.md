@@ -115,26 +115,8 @@ It can also be used to leaverage logic written in Rust, to calculate outputs for
           // ...
           segment: Segment {
             borderColor: 
-              FnWithArgs::new() // Create the Function
-                .arg("ctx") // Add a named argument using a builder pattern, you can have as many arugments as required
-
-                // run rust fn takes your input params, output variable name, and function pointer
-                // this will produce 
-                // const output = window.callbacks.add(1, 1);
-                // return ctx.p0.parsed.y > ctx.p1.parsed.y ? 'red' : 'green'
-                .run_rust_fn(&["1".into(), "1".into()], "output".into(), add) 
-
-                // .body() can be used to add any other javascript
-                .body("console.log(output)")
-
-                .return_value("ctx.p0.parsed.y > ctx.p1.parsed.y ? 'red' : 'green'") // Add the function body, in this case make the line red if the slope is negative
-
-                // this will produce
-                // function(ctx) {
-                //   const output = windows.callbacks.add(1, 1);
-                //   console.log(output);
-                //   return ctx.p0.parsed.y > ctx.p1.parsed.y ? 'red' : 'green'
-                // }
+              // todo!() 
+              // write some examples here!
           }
         }
       ]
