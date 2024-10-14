@@ -249,7 +249,7 @@ impl<const N: usize> Serialize for FnWithArgs<N> {
 
 impl<const N: usize> FnWithArgs<N> {
     pub fn is_empty(&self) -> bool {
-        self.args.iter().any(|arg| arg.is_empty()) || (self.args.is_empty() && self.body.is_empty())
+        self.body.is_empty()
     }
 
     pub fn new() -> Self {
