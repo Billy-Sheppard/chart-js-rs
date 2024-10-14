@@ -204,7 +204,7 @@ impl Model {
                                     //       1st arg: `a`
                                     //       2nd arg: `b`
                                     //       ...
-                                    .js_body("var a = this.getLabelForValue(value);")
+                                    .js_body("var a = this.getLabelForValue(a);")
                                     // function pointer goes here - note that the count of arguments must equal the const param (3 in this case)
                                     .run_rust_fn(show_line_ticks),
                             ),

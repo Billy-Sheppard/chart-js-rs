@@ -235,6 +235,15 @@ fn override_set_fn(s: &ItemStruct, field: &Field) -> Option<TokenStream> {
                 });
             }
         }
+
+        if seg == "FnWithArgs" {
+            return Some(quote! {
+                pub fn #set_name(mut self, value: #type_) -> #s_name #type_params {
+                    self.#name = value;
+                    self
+                }
+            });
+        }
     }
 
     None
