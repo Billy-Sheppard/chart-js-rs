@@ -700,8 +700,41 @@ pub struct Segment {
 }
 
 //
-impl DatasetTrait for Vec<SinglePointDataset> {}
-impl DatasetTrait for Vec<XYDataset> {}
+impl DatasetTrait for Vec<SinglePointDataset> {
+    fn labels(self) -> Vec<NumberOrDateString> {
+        let mut vec = self
+            .into_iter()
+            .map(|spd| spd.label.into())
+            .collect::<Vec<_>>();
+
+        vec.sort_by(crate::get_order_fn);
+        vec.dedup();
+        vec
+    }
+}
+impl DatasetTrait for Vec<XYDataset> {
+    fn labels(self) -> Vec<NumberOrDateString> {
+        let mut vec = self
+            .into_iter()
+            .filter_map(|xyd| {
+                let data = xyd.data.0.as_array()?;
+                let keys = data
+                    .iter()
+                    .filter_map(|xy| xy.as_object())
+                    .filter_map(|obj| obj.get("x"))
+                    .filter_map(|x| x.as_str())
+                    .map(|x| x.into())
+                    .collect::<Vec<NumberOrDateString>>();
+                Some(keys)
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+
+        vec.sort_by(crate::get_order_fn);
+        vec.dedup();
+        vec
+    }
+}
 //
 impl Annotation for BoxAnnotation {}
 impl Annotation for LineAnnotation {}

@@ -1,6 +1,6 @@
 [package]
 name = "chart-js-rs"
-version = "0.0.45"
+version = "0.0.46"
 edition = "2021"
 authors = ["Billy Sheppard", "Luis Moreno"]
 license = "Apache-2.0"
@@ -14,21 +14,21 @@ homepage = "https://github.com/Billy-Sheppard/chart-js-rs"
 [dependencies]
 gloo-console = { version = "0.3" }
 gloo-utils = { version = "0.2", features = ["serde"] }
-js-sys = "0.3.64"
+js-sys = "0.3.77"
 rust_decimal = "1.34"
-serde = { version = "1.0.210", features = ["derive"] }
+serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1"
 serde-wasm-bindgen = "0.6"
-thiserror = "1"
-wasm-bindgen = { version = "0.2.90", features = ["serde-serialize"] }
-uuid = { version = "1.10.0", features = ["v4"] }
+thiserror = "2.0.11"
+wasm-bindgen = { version = "0.2.100", features = ["serde-serialize"] }
+uuid = { version = "1.12.0", features = ["v4"] }
 
 [workspace]
 members = ["examples"]
 
 [build-dependencies]
 heck = "0.5.0"
-itertools = "0.13.0"
-quote = "1.0.37"
-proc-macro2 = "1.0.86"
-syn = { features = ["parsing", "full"], version = "2.0.79" }
+itertools = "0.14.0"
+quote = "1.0.38"
+proc-macro2 = "1.0.93"
+syn = { features = ["parsing", "full"], version = "2.0.96" }

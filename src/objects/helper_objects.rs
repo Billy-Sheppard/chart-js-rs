@@ -1,8 +1,9 @@
-use serde::de::DeserializeOwned;
-
 use {
     crate::{traits::*, utils::FnWithArgs},
-    serde::{de, Deserialize, Serialize},
+    serde::{
+        de::{self, DeserializeOwned},
+        Deserialize, Serialize,
+    },
     std::fmt::{Debug, Display},
 };
 
@@ -37,9 +38,13 @@ impl Ord for DatasetData {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct NoDatasets {}
-impl DatasetTrait for NoDatasets {}
+impl DatasetTrait for NoDatasets {
+    fn labels(self) -> Vec<NumberOrDateString> {
+        Vec::new()
+    }
+}
 #[derive(Debug, Deserialize, Serialize, Default)]
 pub struct NoAnnotations {}
 impl Annotation for NoAnnotations {}
@@ -61,7 +66,8 @@ impl<D: DatasetTrait> Dataset<D> {
     }
     pub fn datasets(mut self, datasets: impl Into<D>) -> Self {
         self.datasets = datasets.into();
-        self
+        let labels = self.datasets.clone();
+        self.labels(labels.labels())
     }
     pub fn get_labels(&mut self) -> &mut Option<Vec<NumberOrDateString>> {
         &mut self.labels

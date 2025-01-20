@@ -3,7 +3,9 @@ use serde::Serialize;
 use serde_json::Value;
 use std::collections::*;
 
-pub trait DatasetTrait: Serialize + Default {}
+pub trait DatasetTrait: Serialize + Default + Clone {
+    fn labels(self) -> Vec<NumberOrDateString>;
+}
 pub trait DatasetDataExt {
     fn presorted_to_dataset_data(self) -> DatasetData;
     fn unsorted_to_dataset_data(self) -> DatasetData;

@@ -1,8 +1,37 @@
+use std::cell::RefCell;
+
 use js_sys::{Array, Function, Object, Reflect};
 use serde::{de, Deserialize, Serialize};
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 
 use crate::{exports::*, FnWithArgsOrAny};
+
+pub fn get_order_fn(
+    lhs: &crate::NumberOrDateString,
+    rhs: &crate::NumberOrDateString,
+) -> std::cmp::Ordering {
+    crate::utils::ORDER_FN.with_borrow(|f| f(lhs, rhs))
+}
+pub fn set_order_fn<
+    F: Fn(&crate::NumberOrDateString, &crate::NumberOrDateString) -> std::cmp::Ordering + 'static,
+>(
+    f: F,
+) {
+    let _ = ORDER_FN.replace(Box::new(f));
+}
+
+thread_local! {
+    #[allow(clippy::type_complexity)]
+    pub static ORDER_FN: RefCell<
+        Box<dyn Fn(&crate::NumberOrDateString, &crate::NumberOrDateString) -> std::cmp::Ordering>,
+    > = RefCell::new({
+        Box::new(
+            |lhs: &crate::NumberOrDateString, rhs: &crate::NumberOrDateString| -> std::cmp::Ordering {
+                lhs.cmp(rhs)
+            },
+        )as Box<_>
+    });
+}
 
 pub fn uncircle_chartjs_value_to_serde_json_value(
     js: impl AsRef<JsValue>,
