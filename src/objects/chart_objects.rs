@@ -496,6 +496,8 @@ pub struct ScaleTicks {
         skip_deserializing // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     )]
     pub(crate) callback: FnWithArgs<3>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) color: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) count: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -515,6 +517,8 @@ pub struct ScaleTicks {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Title {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) color: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) display: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -549,6 +553,8 @@ pub struct LegendLabel {
     pub(crate) boxHeight: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) boxWidth: Option<u32>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) color: String,
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub(crate) filter: FnWithArgs<2>,
@@ -718,17 +724,23 @@ impl DatasetTrait for Vec<XYDataset> {
             .into_iter()
             .filter_map(|xyd| {
                 let data = xyd.data.0.as_array()?;
+                // gloo_console::console_dbg!(&data);
                 let keys = data
                     .iter()
                     .filter_map(|xy| xy.as_object())
                     .filter_map(|obj| obj.get("x"))
-                    .filter_map(|x| x.as_str())
+                    .filter_map(|x| {
+                        x.as_str()
+                            .map(|s| s.to_string())
+                            .or(x.as_number().map(|num| num.to_string()))
+                    })
                     .map(|x| x.into())
                     .collect::<Vec<NumberOrDateString>>();
                 Some(keys)
             })
             .flatten()
             .collect::<Vec<_>>();
+        // gloo_console::console_dbg!(&vec);
 
         vec.sort_by(crate::get_order_fn);
         vec.dedup();

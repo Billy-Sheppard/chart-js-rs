@@ -304,9 +304,14 @@ impl<const N: usize> FnWithArgs<N> {
         self.to_owned()
     }
 
-    pub fn js_return_value(mut self, return_value: &str) -> Self {
-        self.return_value = return_value.to_string();
-        self.to_owned()
+    pub fn js_return_value(self, return_value: &str) -> Self {
+        let mut s = if self.body.is_empty() {
+            self.js_body("")
+        } else {
+            self
+        };
+        s.return_value = return_value.to_string();
+        s.to_owned()
     }
 
     pub fn build(self) -> Function {
