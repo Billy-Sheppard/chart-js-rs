@@ -346,6 +346,8 @@ pub struct ChartScale {
     pub(crate) grid: Option<Grid>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) grouped: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) labels: Option<Vec<NumberOrDateString>>,
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
     pub(crate) max: NumberOrDateString,
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]

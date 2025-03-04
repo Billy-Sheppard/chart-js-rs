@@ -224,6 +224,18 @@ fn override_set_fn(s: &ItemStruct, field: &Field) -> Option<TokenStream> {
                 return Some(iterator_set_fn);
             }
 
+            // for Option<Vec<T>>
+            if type_segments[1].0 == "Vec" {
+                let inner_t = &type_segments[2].1;
+                let iterator_set_fn = quote! {
+                    pub fn #set_name<T: Into<#inner_t>, U: IntoIterator<Item = T>>(mut self, value: U) -> #s_name #type_params {
+                        self.#name = Some(value.into_iter().map(Into::into).collect());
+                        self
+                    }
+                };
+                return Some(iterator_set_fn);
+            }
+
             if type_segments[1].0 == "u32" {
                 let type_ = &type_segments[1].1;
 
