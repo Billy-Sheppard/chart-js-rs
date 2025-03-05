@@ -1,7 +1,7 @@
 [package]
 authors = ["Billy Sheppard <billysheppard@rmhedge.com>"]
 name = "chart-js-rs-example"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 
 [lib]
@@ -16,7 +16,7 @@ getrandom = { version = "*", features = ["js"] }
 gloo = { version = "*" }
 itertools = "*"
 js-sys = { version = "*", default-features = false }
-rand = { version = "*" }
+rand = { version = "*", default-features = false, features = ["std_rng"] }
 serde_json = "*"
 wasm-bindgen = { version = "*" }
 wasm-bindgen-futures = { version = "*", default-features = false }

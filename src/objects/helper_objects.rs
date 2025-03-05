@@ -355,7 +355,9 @@ impl<T: Serialize + DeserializeOwned> NumberStringOrT<T> {
     }
 }
 
-impl<T: Serialize + Display, U: Serialize + DeserializeOwned> From<T> for NumberStringOrT<U> {
+impl<T: Serialize + ChartJsRsObject, U: Serialize + DeserializeOwned> From<T>
+    for NumberStringOrT<U>
+{
     fn from(value: T) -> Self {
         serde_json::from_value(serde_json::to_value(value).unwrap()).unwrap()
     }

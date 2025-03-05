@@ -23,8 +23,8 @@ pub struct SinglePointDataset {
     pub(crate) borderRadius: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) borderSkipped: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) categoryPercentage: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -41,8 +41,8 @@ pub struct SinglePointDataset {
     pub(crate) hoverBorderColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) hoverBorderRadius: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) hoverBorderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) hoverBorderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) indexAxis: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -59,12 +59,12 @@ pub struct SinglePointDataset {
     pub(crate) pointBackgroundColor: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) pointBorderColor: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) pointBorderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) pointBorderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) pointHoverBackgroundColor: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) pointHoverBorderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) pointHoverBorderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
     pub(crate) pointHoverRadius: NumberOrDateString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -138,8 +138,8 @@ pub struct XYDataset {
     pub(crate) hoverBorderColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) hoverBorderRadius: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) hoverBorderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) hoverBorderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) axis: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -156,14 +156,14 @@ pub struct XYDataset {
     pub(crate) pointBackgroundColor: String,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) pointBorderColor: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) pointBorderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) pointBorderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) pointHitRadius: NumberString,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) pointHoverBackgroundColor: String,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) pointHoverBorderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) pointHoverBorderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
     pub(crate) pointHoverRadius: NumberOrDateString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -414,8 +414,8 @@ pub struct LineAnnotation {
     pub(crate) borderColor: String,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub(crate) borderDash: Vec<NumberString>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) drawTime: String,
     #[serde(default, rename = "type")]
@@ -442,8 +442,8 @@ pub struct BoxAnnotation {
     pub(crate) borderColor: String,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub(crate) borderDash: Vec<NumberString>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) drawTime: String,
     #[serde(default, rename = "type")]
@@ -586,18 +586,18 @@ pub struct ChartElements {
 pub struct BarElementConfiguration {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) borderRadius: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) fill: Option<bool>,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) hoverBorderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) hoverBorderWidth: Option<NumberStringOrT<Border>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LineElementConfiguration {
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) cubicInterpolationMode: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -606,12 +606,12 @@ pub struct LineElementConfiguration {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PointElementConfiguration {
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) borderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) hitRadius: NumberString,
-    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
-    pub(crate) hoverBorderWidth: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) hoverBorderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) hoverRadius: NumberString,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]

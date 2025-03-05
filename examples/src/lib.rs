@@ -2,7 +2,7 @@ use chart_js_rs::{bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, *};
 use dominator::{events, html, Dom};
 use futures_signals::signal::{Mutable, Signal, SignalExt};
 use itertools::Itertools;
-use rand::Rng;
+use rand::{Rng, SeedableRng};
 use std::{collections::BTreeMap, sync::Arc};
 use utils::*;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
@@ -10,9 +10,13 @@ use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 mod utils;
 
 fn random() -> Vec<usize> {
-    let rng = rand::thread_rng();
+    let rnd = (0..=20).map(|_| {
+        let mut buf: [u8; 32] = Default::default();
+        getrandom::getrandom(&mut buf).unwrap();
+        let mut rng = rand::prelude::StdRng::from_seed(buf);
 
-    let rnd = (0..=20).map(|_| rng.clone().gen_range(1..50));
+        rng.random_range(1..50)
+    });
 
     rnd.collect()
 }
