@@ -1,7 +1,10 @@
 use crate::objects::*;
 use serde::Serialize;
 use serde_json::Value;
-use std::collections::*;
+use std::{collections::*, fmt::Display};
+
+pub(crate) trait ChartJsRsObject {}
+impl<T: Display> ChartJsRsObject for T {}
 
 pub trait DatasetTrait: Serialize + Default + Clone {
     fn labels(self) -> Vec<NumberOrDateString>;

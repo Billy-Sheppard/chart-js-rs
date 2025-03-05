@@ -140,6 +140,8 @@ fn main() {
 
                     #(#methods)*
                 }
+                '\n'
+                impl #generics crate::ChartJsRsObject for #s_name #type_params {}
             }
         })
         .collect();
