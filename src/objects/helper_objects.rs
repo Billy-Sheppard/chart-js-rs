@@ -202,6 +202,11 @@ impl BoolString {
         self.0.is_empty()
     }
 }
+impl ChartJsRsObject for BoolString {
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+}
 impl<T: Display> From<T> for BoolString {
     fn from(s: T) -> Self {
         Self(s.to_string())
@@ -232,29 +237,40 @@ impl<'de> Deserialize<'de> for BoolString {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum FnWithArgsOrAny<const N: usize> {
-    Any(Any),
+pub enum FnWithArgsOrT<const N: usize, T> {
+    T(T),
     FnWithArgs(FnWithArgs<N>),
 }
-impl<const N: usize> FnWithArgsOrAny<N> {
+#[allow(private_bounds)]
+impl<const N: usize, T: ChartJsRsObject> FnWithArgsOrT<N, T> {
     pub fn is_empty(&self) -> bool {
         match self {
-            FnWithArgsOrAny::Any(a) => a.is_empty(),
-            FnWithArgsOrAny::FnWithArgs(fnwa) => fnwa.is_empty(),
+            FnWithArgsOrT::T(a) => a.is_empty(),
+            FnWithArgsOrT::FnWithArgs(fnwa) => fnwa.is_empty(),
         }
     }
 }
-impl<const N: usize> Default for FnWithArgsOrAny<N> {
+impl<const N: usize, T: Default> Default for FnWithArgsOrT<N, T> {
     fn default() -> Self {
-        FnWithArgsOrAny::Any(Any::from(false))
+        FnWithArgsOrT::T(T::default())
     }
 }
-impl<const N: usize, T: Display> From<T> for FnWithArgsOrAny<N> {
+impl<const N: usize, T: Into<String>> From<T> for FnWithArgsOrT<N, String> {
     fn from(s: T) -> Self {
-        Self::Any(s.to_string().into())
+        Self::T(s.into())
     }
 }
-impl<const N: usize> From<FnWithArgs<N>> for FnWithArgsOrAny<N> {
+impl<const N: usize, T: Into<NumberString>> From<T> for FnWithArgsOrT<N, NumberString> {
+    fn from(ns: T) -> Self {
+        Self::T(ns.into())
+    }
+}
+impl<const N: usize, T: Into<BoolString>> From<T> for FnWithArgsOrT<N, BoolString> {
+    fn from(bs: T) -> Self {
+        Self::T(bs.into())
+    }
+}
+impl<const N: usize, T> From<FnWithArgs<N>> for FnWithArgsOrT<N, T> {
     fn from(value: FnWithArgs<N>) -> Self {
         Self::FnWithArgs(value)
     }
@@ -270,6 +286,11 @@ impl From<NumberOrDateString> for NumberString {
 impl NumberString {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+}
+impl ChartJsRsObject for NumberString {
+    fn is_empty(&self) -> bool {
+        self.is_empty()
     }
 }
 impl PartialOrd for NumberString {

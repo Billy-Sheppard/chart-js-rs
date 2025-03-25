@@ -141,7 +141,11 @@ fn main() {
                     #(#methods)*
                 }
                 '\n'
-                impl #generics crate::ChartJsRsObject for #s_name #type_params {}
+                impl #generics crate::ChartJsRsObject for #s_name #type_params {
+                    fn is_empty(&self) -> bool {
+                        false
+                    }
+                }
             }
         })
         .collect();

@@ -88,8 +88,8 @@ pub struct SinglePointDataset {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct XYDataset {
-    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub(crate) backgroundColor: FnWithArgsOrAny<2>,
+    #[serde(skip_serializing_if = "FnWithArgsOrT::is_empty", default)]
+    pub(crate) backgroundColor: FnWithArgsOrT<2, String>,
     #[serde(
         skip_serializing_if = "Vec::is_empty",
         default,
@@ -401,6 +401,8 @@ pub struct Grid {
     pub(crate) display: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) drawOnChartArea: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) offset: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default, skip_deserializing)]
     // the skip_deserializing needed because chartjs sets a default with a different type, FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub(crate) tickColor: String,
@@ -566,6 +568,9 @@ pub struct LegendLabel {
     pub(crate) pointStyle: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) pointStyleWidth: NumberString,
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
+    // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    pub(crate) sort: FnWithArgs<3>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) useBorderRadius: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -620,12 +625,12 @@ pub struct PointElementConfiguration {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DataLabels {
-    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub(crate) align: FnWithArgsOrAny<1>,
-    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub(crate) anchor: FnWithArgsOrAny<1>,
-    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
-    pub(crate) backgroundColor: FnWithArgsOrAny<1>,
+    #[serde(skip_serializing_if = "FnWithArgsOrT::is_empty", default)]
+    pub(crate) align: FnWithArgsOrT<1, String>,
+    #[serde(skip_serializing_if = "FnWithArgsOrT::is_empty", default)]
+    pub(crate) anchor: FnWithArgsOrT<1, String>,
+    #[serde(skip_serializing_if = "FnWithArgsOrT::is_empty", default)]
+    pub(crate) backgroundColor: FnWithArgsOrT<1, String>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) borderRadius: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -634,8 +639,8 @@ pub struct DataLabels {
     pub(crate) clip: Option<bool>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) color: String,
-    #[serde(default = "BoolString::_false")]
-    pub(crate) display: BoolString,
+    #[serde(skip_serializing_if = "FnWithArgsOrT::is_empty", default)]
+    pub(crate) display: FnWithArgsOrT<1, BoolString>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) drawTime: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -643,13 +648,15 @@ pub struct DataLabels {
     #[serde(skip_serializing_if = "FnWithArgs::is_empty", skip_deserializing)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
     pub(crate) formatter: FnWithArgs<2>,
-    #[serde(skip_serializing_if = "FnWithArgsOrAny::is_empty", default)]
+    #[serde(skip_serializing_if = "FnWithArgsOrT::is_empty", default)]
     // FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
-    pub(crate) offset: FnWithArgsOrAny<1>,
+    pub(crate) offset: FnWithArgsOrT<1, NumberString>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) opacity: NumberString,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) padding: Option<Padding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) rotation: Option<i16>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) z: NumberString,
 }

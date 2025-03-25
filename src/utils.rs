@@ -4,7 +4,7 @@ use js_sys::{Array, Function, Object, Reflect};
 use serde::{de, Deserialize, Serialize};
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 
-use crate::{exports::*, FnWithArgsOrAny};
+use crate::{exports::*, BoolString, FnWithArgsOrT, NumberString};
 
 pub fn get_order_fn(
     lhs: &crate::NumberOrDateString,
@@ -48,24 +48,30 @@ pub fn uncircle_chartjs_value_to_serde_json_value(
     serde_json::from_str(&js_string).map_err(|e| e.to_string())
 }
 
-fn rationalise_1_level<const N: usize>(obj: &JsValue, name: &'static str) {
+fn rationalise_1_level<const N: usize, T: for<'a> Deserialize<'a>>(
+    obj: &JsValue,
+    name: &'static str,
+) {
     if let Ok(a) = Reflect::get(obj, &name.into()) {
         // If the property is undefined, dont try serialize it
         if a == JsValue::UNDEFINED {
             return;
         }
 
-        if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrAny<N>>(a) {
+        if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrT<N, T>>(a) {
             match o {
-                FnWithArgsOrAny::Any(_) => (),
-                FnWithArgsOrAny::FnWithArgs(fnwa) => {
+                FnWithArgsOrT::T(_) => (),
+                FnWithArgsOrT::FnWithArgs(fnwa) => {
                     let _ = Reflect::set(obj, &name.into(), &fnwa.build());
                 }
             }
         }
     }
 }
-fn rationalise_2_levels<const N: usize>(obj: &JsValue, name: (&'static str, &'static str)) {
+fn rationalise_2_levels<const N: usize, T: for<'a> Deserialize<'a>>(
+    obj: &JsValue,
+    name: (&'static str, &'static str),
+) {
     if let Ok(a) = Reflect::get(obj, &name.0.into()) {
         // If the property is undefined, dont try serialize it
         if a == JsValue::UNDEFINED {
@@ -78,10 +84,10 @@ fn rationalise_2_levels<const N: usize>(obj: &JsValue, name: (&'static str, &'st
                 return;
             }
 
-            if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrAny<N>>(b) {
+            if let Ok(o) = serde_wasm_bindgen::from_value::<FnWithArgsOrT<N, T>>(b) {
                 match o {
-                    FnWithArgsOrAny::Any(_) => (),
-                    FnWithArgsOrAny::FnWithArgs(fnwa) => {
+                    FnWithArgsOrT::T(_) => (),
+                    FnWithArgsOrT::FnWithArgs(fnwa) => {
                         let _ = Reflect::set(&a, &name.1.into(), &fnwa.build());
                     }
                 }
@@ -178,14 +184,15 @@ impl Chart {
         Array::from(&get_path(&self.obj, "data.datasets").unwrap())
             .iter()
             .for_each(|dataset| {
-                rationalise_1_level::<2>(&dataset, "backgroundColor");
-                rationalise_2_levels::<1>(&dataset, ("segment", "borderDash"));
-                rationalise_2_levels::<1>(&dataset, ("segment", "borderColor"));
-                rationalise_2_levels::<1>(&dataset, ("datalabels", "align"));
-                rationalise_2_levels::<1>(&dataset, ("datalabels", "anchor"));
-                rationalise_2_levels::<1>(&dataset, ("datalabels", "backgroundColor"));
-                rationalise_2_levels::<2>(&dataset, ("datalabels", "formatter"));
-                rationalise_2_levels::<1>(&dataset, ("datalabels", "offset"));
+                rationalise_1_level::<2, String>(&dataset, "backgroundColor");
+                rationalise_2_levels::<1, ()>(&dataset, ("segment", "borderDash"));
+                rationalise_2_levels::<1, ()>(&dataset, ("segment", "borderColor"));
+                rationalise_2_levels::<1, String>(&dataset, ("datalabels", "align"));
+                rationalise_2_levels::<1, String>(&dataset, ("datalabels", "anchor"));
+                rationalise_2_levels::<1, String>(&dataset, ("datalabels", "backgroundColor"));
+                rationalise_2_levels::<2, ()>(&dataset, ("datalabels", "formatter"));
+                rationalise_2_levels::<1, NumberString>(&dataset, ("datalabels", "offset"));
+                rationalise_2_levels::<1, BoolString>(&dataset, ("datalabels", "display"));
             });
 
         // Handle options.scales
@@ -193,19 +200,20 @@ impl Chart {
             Object::values(&scales.dyn_into().unwrap())
                 .iter()
                 .for_each(|scale| {
-                    rationalise_2_levels::<3>(&scale, ("ticks", "callback"));
+                    rationalise_2_levels::<3, ()>(&scale, ("ticks", "callback"));
                 });
         }
 
         // Handle options.plugins.legend
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.legend") {
-            rationalise_2_levels::<2>(&legend, ("labels", "filter"));
+            rationalise_2_levels::<2, ()>(&legend, ("labels", "filter"));
+            rationalise_2_levels::<3, ()>(&legend, ("labels", "sort"));
         }
         // Handle options.plugins.tooltip
         if let Some(legend) = object_values_at(&self.obj, "options.plugins.tooltip") {
-            rationalise_1_level::<1>(&legend, "filter");
-            rationalise_2_levels::<1>(&legend, ("callbacks", "label"));
-            rationalise_2_levels::<1>(&legend, ("callbacks", "title"));
+            rationalise_1_level::<1, ()>(&legend, "filter");
+            rationalise_2_levels::<1, ()>(&legend, ("callbacks", "label"));
+            rationalise_2_levels::<1, ()>(&legend, ("callbacks", "title"));
         }
     }
 }
