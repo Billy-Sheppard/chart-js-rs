@@ -1,5 +1,5 @@
 use {
-    crate::{objects::helper_objects::*, traits::*, utils::FnWithArgs},
+    crate::{objects::helper_objects::*, traits::*},
     serde::{de, Deserialize, Serialize},
     serde_json::Value,
     std::{collections::HashMap, fmt::Debug},

@@ -1,10 +1,12 @@
 use {
-    crate::{traits::*, utils::FnWithArgs},
+    crate::traits::*,
+    js_sys::{Function, Reflect},
     serde::{
         de::{self, DeserializeOwned},
         Deserialize, Serialize,
     },
     std::fmt::{Debug, Display},
+    wasm_bindgen::{JsCast, JsValue},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
@@ -183,7 +185,7 @@ impl<'de> Deserialize<'de> for NumberOrDateString {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BoolString(String);
 impl BoolString {
     pub fn opt_true() -> Option<BoolString> {
@@ -200,6 +202,11 @@ impl BoolString {
     }
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+}
+impl Default for BoolString {
+    fn default() -> Self {
+        Self::_false()
     }
 }
 impl ChartJsRsObject for BoolString {
@@ -235,11 +242,476 @@ impl<'de> Deserialize<'de> for BoolString {
     }
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+struct JavascriptFunction {
+    args: Vec<String>,
+    body: String,
+    return_value: String,
+    closure_id: Option<String>,
+}
+
+const ALPHABET: [&str; 32] = [
+    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
+    "t", "u", "v", "w", "x", "y", "z", "aa", "bb", "cc", "dd", "ee", "ff",
+];
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FnWithArgs<const N: usize> {
+    pub(crate) args: [String; N],
+    pub(crate) body: String,
+    pub(crate) return_value: String,
+    pub(crate) closure_id: Option<String>,
+}
+impl<const N: usize> FnWithArgs<N> {
+    pub fn rationalise_1_level(obj: &JsValue, name: &'static str) {
+        super::rationalise_1_level::<N, Self>(obj, name, |o| {
+            let _ = Reflect::set(obj, &name.into(), &o.build());
+        })
+    }
+    pub fn rationalise_2_levels(obj: &JsValue, name: (&'static str, &'static str)) {
+        super::rationalise_2_levels::<N, Self>(obj, name, |a, o| {
+            let _ = Reflect::set(&a, &name.1.into(), &o.build());
+        })
+    }
+}
+
+impl<const N: usize> Default for FnWithArgs<N> {
+    fn default() -> Self {
+        Self {
+            args: (0..N)
+                .map(|idx| ALPHABET[idx].to_string())
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
+            body: Default::default(),
+            return_value: Default::default(),
+            closure_id: None,
+        }
+    }
+}
+impl<'de, const N: usize> Deserialize<'de> for FnWithArgs<N> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let js = JavascriptFunction::deserialize(deserializer)?;
+        Ok(FnWithArgs::<N> {
+            args: js.args.clone().try_into().map_err(|_| {
+                de::Error::custom(format!("Array had length {}, needed {}.", js.args.len(), N))
+            })?,
+            body: js.body,
+            return_value: js.return_value,
+            closure_id: js.closure_id,
+        })
+    }
+}
+impl<const N: usize> Serialize for FnWithArgs<N> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        JavascriptFunction::serialize(
+            &JavascriptFunction {
+                args: self.args.to_vec(),
+                body: self.body.clone(),
+                return_value: self.return_value.clone(),
+                closure_id: self.closure_id.clone(),
+            },
+            serializer,
+        )
+    }
+}
+
+impl<const N: usize> FnWithArgs<N> {
+    pub fn is_empty(&self) -> bool {
+        self.body.is_empty()
+    }
+
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn args<S: AsRef<str>>(mut self, args: [S; N]) -> Self {
+        self.args = args
+            .into_iter()
+            .enumerate()
+            .map(|(idx, s)| {
+                let arg = s.as_ref();
+                if arg.is_empty() { ALPHABET[idx] } else { arg }.to_string()
+            })
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap();
+        self
+    }
+
+    pub fn js_body(mut self, body: &str) -> Self {
+        self.body = format!("{}\n{body}", self.body);
+        self.to_owned()
+    }
+
+    pub fn js_return_value(self, return_value: &str) -> Self {
+        let mut s = if self.body.is_empty() {
+            self.js_body("")
+        } else {
+            self
+        };
+        s.return_value = return_value.to_string();
+        s.to_owned()
+    }
+
+    pub fn build(self) -> Function {
+        if let Some(id) = self.closure_id {
+            let args = self.args.join(", ");
+            Function::new_with_args(&args, &format!("{{ return window['{id}']({args}) }}"))
+        } else {
+            Function::new_with_args(
+                &self.args.join(", "),
+                &format!("{{ {}\nreturn {} }}", self.body, self.return_value),
+            )
+        }
+    }
+}
+
+impl FnWithArgs<1> {
+    pub fn run_rust_fn<A, B, FN: Fn(A) -> B>(mut self, _func: FN) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue) -> JsValue + 'static>(mut self, closure: F) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<2> {
+    pub fn run_rust_fn<A, B, C, FN: Fn(A, B) -> C>(mut self, _func: FN) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue, JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<3> {
+    pub fn run_rust_fn<A, B, C, D, FN: Fn(A, B, C) -> D>(mut self, _func: FN) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue, JsValue, JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<4> {
+    pub fn run_rust_fn<A, B, C, D, E, FN: Fn(A, B, C, D) -> E>(mut self, _func: FN) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(
+            Box::new(closure) as Box<dyn Fn(JsValue, JsValue, JsValue, JsValue) -> JsValue>
+        );
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<5> {
+    pub fn run_rust_fn<A, B, C, D, E, F, FN: Fn(A, B, C, D, E) -> F>(mut self, _func: FN) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
+    #[track_caller]
+    pub fn rust_closure<F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static>(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(Box::new(closure)
+            as Box<dyn Fn(JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue>);
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+impl FnWithArgs<6> {
+    pub fn run_rust_fn<A, B, C, D, E, F, G, FN: Fn(A, B, C, D, E, F) -> G>(
+        mut self,
+        _func: FN,
+    ) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
+    #[track_caller]
+    pub fn rust_closure<
+        F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static,
+    >(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(Box::new(closure)
+            as Box<dyn Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue>);
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
+// 7 is the maximum wasm_bindgen can handle rn AFAIK
+impl FnWithArgs<7> {
+    pub fn run_rust_fn<A, B, C, D, E, F, G, H, FN: Fn(A, B, C, D, E, F, G) -> H>(
+        mut self,
+        _func: FN,
+    ) -> Self {
+        let fn_name = std::any::type_name::<FN>()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .next_back()
+            .unwrap();
+
+        self.body = format!(
+            "{}\nconst _out_ = window.callbacks.{}({});",
+            self.body,
+            fn_name,
+            self.args.join(", ")
+        );
+        self.js_return_value("_out_")
+    }
+
+    #[track_caller]
+    pub fn rust_closure<
+        F: Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue + 'static,
+    >(
+        mut self,
+        closure: F,
+    ) -> Self {
+        let js_closure = wasm_bindgen::closure::Closure::wrap(Box::new(closure)
+            as Box<
+                dyn Fn(JsValue, JsValue, JsValue, JsValue, JsValue, JsValue, JsValue) -> JsValue,
+            >);
+        let js_sys_fn: &js_sys::Function = js_closure.as_ref().unchecked_ref();
+
+        let js_window = gloo_utils::window();
+        let id = uuid::Uuid::new_v4().to_string();
+        Reflect::set(&js_window, &JsValue::from_str(&id), js_sys_fn).unwrap();
+        js_closure.forget();
+
+        gloo_console::debug!(format!(
+            "Closure at {}:{}:{} set at window.['{id}'].",
+            file!(),
+            line!(),
+            column!()
+        ));
+        self.closure_id = Some(id);
+        self
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum FnWithArgsOrT<const N: usize, T> {
     T(T),
     FnWithArgs(FnWithArgs<N>),
+}
+
+impl<const N: usize, T: for<'a> Deserialize<'a>> FnWithArgsOrT<N, T> {
+    pub fn rationalise_1_level(obj: &JsValue, name: &'static str) {
+        super::rationalise_1_level::<N, Self>(obj, name, |o| match o {
+            FnWithArgsOrT::T(_) => (),
+            FnWithArgsOrT::FnWithArgs(fnwa) => {
+                let _ = Reflect::set(obj, &name.into(), &fnwa.build());
+            }
+        })
+    }
+    pub fn rationalise_2_levels(obj: &JsValue, name: (&'static str, &'static str)) {
+        super::rationalise_2_levels::<N, Self>(obj, name, |a, o| match o {
+            FnWithArgsOrT::T(_) => (),
+            FnWithArgsOrT::FnWithArgs(fnwa) => {
+                let _ = Reflect::set(&a, &name.1.into(), &fnwa.build());
+            }
+        })
+    }
 }
 #[allow(private_bounds)]
 impl<const N: usize, T: ChartJsRsObject> FnWithArgsOrT<N, T> {
