@@ -2,6 +2,7 @@
 #![doc = include_str!("../README.md")]
 
 pub mod bar;
+pub mod coordinate;
 pub mod doughnut;
 pub mod exports;
 pub mod functions;
