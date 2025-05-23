@@ -324,7 +324,10 @@ impl<const N: usize> Serialize for FnWithArgs<N> {
 
 impl<const N: usize> FnWithArgs<N> {
     pub fn is_empty(&self) -> bool {
-        self.body.is_empty()
+        match self.closure_id {
+            Some(_) => false,
+            None => self.body.is_empty(),
+        }
     }
 
     pub fn new() -> Self {
