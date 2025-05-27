@@ -47,9 +47,6 @@ impl DatasetTrait for NoDatasets {
         Vec::new()
     }
 }
-#[derive(Debug, Deserialize, Serialize, Default)]
-pub struct NoAnnotations {}
-impl Annotation for NoAnnotations {}
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Dataset<D: DatasetTrait> {

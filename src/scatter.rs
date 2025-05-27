@@ -1,20 +1,20 @@
 use serde::{
-    de::{self, DeserializeOwned},
+    de::{self},
     Deserialize, Serialize,
 };
 
-use crate::{objects::*, traits::*, ChartExt};
+use crate::{objects::*, ChartExt};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
-pub struct Scatter<A: Annotation> {
+pub struct Scatter {
     #[serde(rename = "type")]
     r#type: ScatterString,
     data: Dataset<Vec<XYDataset>>,
-    options: ChartOptions<A>,
+    options: ChartOptions,
     id: String,
 }
 
-impl<A: Annotation + DeserializeOwned> ChartExt<A> for Scatter<A> {
+impl ChartExt for Scatter {
     type DS = Dataset<Vec<XYDataset>>;
 
     fn get_id(self) -> String {
@@ -29,7 +29,7 @@ impl<A: Annotation + DeserializeOwned> ChartExt<A> for Scatter<A> {
         &mut self.data
     }
 
-    fn get_options(&mut self) -> &mut ChartOptions<A> {
+    fn get_options(&mut self) -> &mut ChartOptions {
         &mut self.options
     }
 }

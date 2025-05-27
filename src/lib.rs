@@ -21,9 +21,7 @@ use serde::{de::DeserializeOwned, Serialize};
 pub use traits::*;
 pub use utils::*;
 
-pub trait ChartExt<A: Annotation + DeserializeOwned>:
-    DeserializeOwned + Serialize + Default
-{
+pub trait ChartExt: DeserializeOwned + Serialize + Default {
     type DS;
 
     fn new(id: impl AsRef<str>) -> Self {
@@ -39,8 +37,8 @@ pub trait ChartExt<A: Annotation + DeserializeOwned>:
         self
     }
 
-    fn get_options(&mut self) -> &mut ChartOptions<A>;
-    fn options(mut self, options: impl Into<ChartOptions<A>>) -> Self {
+    fn get_options(&mut self) -> &mut ChartOptions;
+    fn options(mut self, options: impl Into<ChartOptions>) -> Self {
         *self.get_options() = options.into();
         self
     }

@@ -91,7 +91,7 @@ impl Model {
         // construct and render chart here
         let id = "scatter";
 
-        let chart = Scatter::<NoAnnotations>::new(id)
+        let chart = Scatter::new(id)
             // we use <NoAnnotations> here to type hint for the compiler
             .data(
                 Dataset::new().datasets([
@@ -123,7 +123,7 @@ impl Model {
         // construct and render chart here
         let id = "line";
 
-        let chart = Scatter::<NoAnnotations>::new(id)
+        let chart = Scatter::new(id)
             // we use <NoAnnotations> here to type hint for the compiler
             .data(
                 Dataset::new().datasets([
@@ -229,7 +229,7 @@ impl Model {
         // construct and render chart here
         let id = "bar";
 
-        let chart = Bar::<NoAnnotations>::new(id)
+        let chart = Bar::new(id)
             // we use <NoAnnotations> here to type hint for the compiler
             .data(
                 Dataset::new()
@@ -266,7 +266,7 @@ impl Model {
         let three_a_id = "donut_a";
         let three_b_id = "donut_b";
 
-        let three_a_chart = Doughnut::<NoAnnotations>::new(three_a_id)
+        let three_a_chart = Doughnut::new(three_a_id)
             .data(
                 Dataset::new()
                     .datasets({
@@ -282,7 +282,7 @@ impl Model {
                     .labels(["Blueberries", "Limes", "Apples", "Lemons"]),
             )
             .options(ChartOptions::new().maintain_aspect_ratio(false));
-        let three_b_chart = Pie::<NoAnnotations>::new(three_b_id)
+        let three_b_chart = Pie::new(three_b_id)
             .data(
                 Dataset::new()
                     .datasets({
@@ -427,7 +427,7 @@ impl Model {
                                             let _self = _self.clone();
                                             move |_: events::Click| {
                                                 // update scatter chart colour
-                                                let mut chart: Scatter::<NoAnnotations> = ChartExt::get_chart_from_id("scatter").expect("Unable to retrieve chart from JS.");
+                                                let mut chart: Scatter = ChartExt::get_chart_from_id("scatter").expect("Unable to retrieve chart from JS.");
                                                 chart.get_data().get_datasets().get_mut(0).map(|d| {
                                                     if _self.tick.get() {
                                                         *d.get_background_color() = "lightcoral".into();
@@ -461,7 +461,7 @@ impl Model {
                                             let _self = _self.clone();
                                             move |_: events::Click| {
                                                 // update scatter chart colour
-                                                let mut chart: Scatter::<NoAnnotations> = ChartExt::get_chart_from_id("scatter").expect("Unable to retrieve chart from JS.");
+                                                let mut chart: Scatter = ChartExt::get_chart_from_id("scatter").expect("Unable to retrieve chart from JS.");
                                                 chart.get_data().get_datasets().get_mut(0).map(|d| {
                                                     if _self.tick.get() {
                                                         *d.get_background_color() = "lightcoral".into();

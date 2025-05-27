@@ -99,8 +99,11 @@ fn main() {
                                 type_vec.push(s);
                             }
                         }
-                        // append_log(type_vec.clone().into_iter().join(""));
-                        let type_ = ident(&type_vec.into_iter().join("")).unwrap().to_token_stream();
+                        append_log(type_vec.clone().into_iter().join(""));
+                        if let Err(e) = ident(&type_vec.clone().into_iter().join("")) {
+                            append_log(e);
+                        }
+                        let type_ = ident(&type_vec.clone().into_iter().join("")).or(ident(&format!("{}>",type_vec.into_iter().join("")))).unwrap().to_token_stream();
 
                         quote!{
                             pub fn #set_name(mut self, value: impl Into<#type_>) -> #s_name #type_params {
@@ -312,12 +315,12 @@ fn ident(i: &str) -> Result<syn::Type, syn::Error> {
     syn::parse_str(i)
 }
 
-// fn append_log(s: impl std::fmt::Debug) {
-//     let mut file = std::fs::OpenOptions::new()
-//         .append(true)
-//         .open("build_logs.txt")
-//         .unwrap();
+fn append_log(s: impl std::fmt::Debug) {
+    let mut file = std::fs::OpenOptions::new()
+        .append(true)
+        .open("build_logs.txt")
+        .unwrap();
 
-//     file.write_all(format!("{:#?}", s).as_bytes()).unwrap();
-//     file.write_all(b"\n").unwrap();
-// }
+    file.write_all(format!("{:#?}", s).as_bytes()).unwrap();
+    file.write_all(b"\n").unwrap();
+}

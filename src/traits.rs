@@ -56,5 +56,3 @@ pub trait DatasetIterExt: Iterator {
     }
 }
 impl<T> DatasetIterExt for T where T: Iterator + ?Sized {}
-
-pub trait Annotation: Serialize + Default {}

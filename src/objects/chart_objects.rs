@@ -206,7 +206,7 @@ pub struct XYPoint {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct ChartOptions<A: Annotation> {
+pub struct ChartOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) animation: Option<Animation>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -222,7 +222,7 @@ pub struct ChartOptions<A: Annotation> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) maintainAspectRatio: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) plugins: Option<ChartPlugins<A>>,
+    pub(crate) plugins: Option<ChartPlugins>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) responsive: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -238,9 +238,9 @@ pub struct Animation {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct ChartPlugins<A: Annotation> {
+pub struct ChartPlugins {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) annotation: Option<Annotations<A>>,
+    pub(crate) annotation: Option<Annotations>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) autocolors: Option<AutoColors>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -264,9 +264,9 @@ pub struct PluginLegend {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct Annotations<A: Annotation> {
+pub struct Annotations {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) annotations: Option<HashMap<String, A>>,
+    pub(crate) annotations: Option<HashMap<String, Annotation>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -411,6 +411,77 @@ pub struct Grid {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Callout {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) backgroundColor: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) borderColor: String,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) borderDash: Vec<NumberString>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) display: Option<bool>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) position: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) start: NumberString,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LabelAnnotation {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) backgroundColor: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) borderRadius: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) borderColor: String,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) borderDash: Vec<NumberString>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) callout: Option<Callout>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) color: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) content: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) drawTime: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) font: Option<Font>,
+    #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
+    // the skip_deserializing needed because chartjs sets a default with a different type
+    pub(crate) padding: Option<Padding>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) position: String,
+    #[serde(default, rename = "type")]
+    pub(crate) r#type: LabelAnnotationType,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) textAlign: String,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) xValue: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) xAdjust: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) yValue: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) yAdjust: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) xMax: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) xMin: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) yMax: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) yMin: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) yScaleID: NumberString,
+}
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LabelAnnotationType;
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LineAnnotation {
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) borderColor: String,
@@ -511,7 +582,7 @@ pub struct ScaleTicks {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) maxTicksLimit: NumberString,
     #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
-    // the skip_deserializing needed because chartjs sets a default with a different type, FnWithArgs can't deser right now, might be solved in the future with a fancy serde deserializer
+    // the skip_deserializing needed because chartjs sets a default with a different type
     pub(crate) padding: Option<Padding>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) precision: NumberString,
@@ -757,8 +828,35 @@ impl DatasetTrait for Vec<XYDataset> {
     }
 }
 //
-impl Annotation for BoxAnnotation {}
-impl Annotation for LineAnnotation {}
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum Annotation {
+    Box(BoxAnnotation),
+    Line(LineAnnotation),
+    Label(LabelAnnotation),
+}
+
+impl Default for Annotation {
+    fn default() -> Self {
+        Self::Line(Default::default())
+    }
+}
+impl From<BoxAnnotation> for Annotation {
+    fn from(value: BoxAnnotation) -> Self {
+        Self::Box(value)
+    }
+}
+impl From<LineAnnotation> for Annotation {
+    fn from(value: LineAnnotation) -> Self {
+        Self::Line(value)
+    }
+}
+impl From<LabelAnnotation> for Annotation {
+    fn from(value: LabelAnnotation) -> Self {
+        Self::Label(value)
+    }
+}
 //
 impl From<(NumberOrDateString, NumberString, Option<Value>)> for XYPoint {
     fn from((x, y, d): (NumberOrDateString, NumberString, Option<Value>)) -> Self {
@@ -800,6 +898,15 @@ impl Serialize for LineAnnotationType {
     }
 }
 //
+impl Serialize for LabelAnnotationType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str("label")
+    }
+}
+//
 impl<'de> Deserialize<'de> for BoxAnnotationType {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -813,6 +920,7 @@ impl<'de> Deserialize<'de> for BoxAnnotationType {
         }
     }
 }
+//
 impl<'de> Deserialize<'de> for LineAnnotationType {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -822,6 +930,20 @@ impl<'de> Deserialize<'de> for LineAnnotationType {
             "line" => Ok(LineAnnotationType),
             other => Err(de::Error::custom(format!(
                 "`{other}` is not a valid LineAnnotationType."
+            ))),
+        }
+    }
+}
+//
+impl<'de> Deserialize<'de> for LabelAnnotationType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        match String::deserialize(deserializer)?.to_lowercase().as_str() {
+            "label" => Ok(LabelAnnotationType),
+            other => Err(de::Error::custom(format!(
+                "`{other}` is not a valid LabelAnnotationType."
             ))),
         }
     }

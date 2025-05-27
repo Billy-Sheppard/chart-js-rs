@@ -1,19 +1,19 @@
 use serde::{
-    de::{self, DeserializeOwned},
+    de::{self},
     Deserialize, Serialize,
 };
 
-use crate::{objects::*, traits::*, ChartExt};
+use crate::{objects::*, ChartExt};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
-pub struct Doughnut<A: Annotation> {
+pub struct Doughnut {
     #[serde(rename = "type")]
     r#type: DoughnutString,
     data: Dataset<Vec<SinglePointDataset>>,
-    options: ChartOptions<A>,
+    options: ChartOptions,
     id: String,
 }
-impl<A: Annotation + DeserializeOwned> ChartExt<A> for Doughnut<A> {
+impl ChartExt for Doughnut {
     type DS = Dataset<Vec<SinglePointDataset>>;
 
     fn get_id(self) -> String {
@@ -28,7 +28,7 @@ impl<A: Annotation + DeserializeOwned> ChartExt<A> for Doughnut<A> {
         &mut self.data
     }
 
-    fn get_options(&mut self) -> &mut ChartOptions<A> {
+    fn get_options(&mut self) -> &mut ChartOptions {
         &mut self.options
     }
 }

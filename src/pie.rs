@@ -1,20 +1,20 @@
 use serde::{
-    de::{self, DeserializeOwned},
+    de::{self},
     Deserialize, Serialize,
 };
 
-use crate::{objects::*, traits::*, ChartExt};
+use crate::{objects::*, ChartExt};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
-pub struct Pie<A: Annotation> {
+pub struct Pie {
     #[serde(rename = "type")]
     r#type: PieString,
     data: Dataset<Vec<SinglePointDataset>>,
-    options: ChartOptions<A>,
+    options: ChartOptions,
     id: String,
 }
 
-impl<A: Annotation + DeserializeOwned> ChartExt<A> for Pie<A> {
+impl ChartExt for Pie {
     type DS = Dataset<Vec<SinglePointDataset>>;
 
     fn get_id(self) -> String {
@@ -29,7 +29,7 @@ impl<A: Annotation + DeserializeOwned> ChartExt<A> for Pie<A> {
         &mut self.data
     }
 
-    fn get_options(&mut self) -> &mut ChartOptions<A> {
+    fn get_options(&mut self) -> &mut ChartOptions {
         &mut self.options
     }
 }
