@@ -444,10 +444,12 @@ pub struct LabelAnnotation {
     pub(crate) callout: Option<Callout>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) color: String,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub(crate) content: String,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) content: Vec<String>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) drawTime: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) display: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) font: Option<Font>,
     #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
@@ -491,6 +493,8 @@ pub struct LineAnnotation {
     pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) drawTime: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) label: Option<LabelAnnotation>,
     #[serde(default, rename = "type")]
     pub(crate) r#type: LineAnnotationType,
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]

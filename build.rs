@@ -100,7 +100,7 @@ fn main() {
                             }
                         }
                         // append_log(type_vec.clone().into_iter().join(""));
-                        
+
                         let type_ = ident(&type_vec.clone().into_iter().join("")).or(ident(&format!("{}>",type_vec.into_iter().join("")))).unwrap().to_token_stream();
 
                         quote!{
