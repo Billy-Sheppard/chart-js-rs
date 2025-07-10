@@ -1,5 +1,5 @@
 use crate::objects::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::*, fmt::Display};
 
@@ -12,7 +12,7 @@ impl<T: Display> ChartJsRsObject for T {
     }
 }
 
-pub trait DatasetTrait: Serialize + Default + Clone {
+pub trait DatasetTrait: for<'a> Deserialize<'a> + Serialize + Default + Clone {
     fn labels(self) -> Vec<NumberOrDateString>;
 }
 pub trait DatasetDataExt {

@@ -49,6 +49,7 @@ impl DatasetTrait for NoDatasets {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(bound = "D: DatasetTrait")]
 pub struct Dataset<D: DatasetTrait> {
     datasets: D,
     labels: Option<Vec<NumberOrDateString>>,
@@ -76,6 +77,7 @@ impl<D: DatasetTrait> Dataset<D> {
         labels: impl IntoIterator<Item = T>,
     ) -> Self {
         self.labels = Some(labels.into_iter().map(Into::into).collect());
+        
         self
     }
 }

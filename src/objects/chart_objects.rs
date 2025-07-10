@@ -192,7 +192,112 @@ pub struct XYDataset {
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) z: NumberString,
 }
-
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FloatingDataset {
+    #[serde(skip_serializing_if = "FnWithArgsOrT::is_empty", default)]
+    pub(crate) backgroundColor: FnWithArgsOrT<2, String>,
+    #[serde(
+        skip_serializing_if = "Vec::is_empty",
+        default,
+        rename(serialize = "backgroundColor")
+    )]
+    pub(crate) backgroundColorArray: Vec<String>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) barPercentage: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) barThickness: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) base: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) borderColor: String,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub(crate) borderDash: Vec<NumberString>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) borderJoinStyle: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) borderRadius: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) borderSkipped: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) borderWidth: Option<NumberStringOrT<Border>>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) category_label: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) categoryPercentage: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) clip: NumberString,
+    #[serde(skip_serializing_if = "DatasetData::is_empty", default)]
+    pub(crate) data: DatasetData,
+    /// Use Default::default() if this isn't required
+    pub(crate) datalabels: DataLabels,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) description: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) fill: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) grouped: Option<bool>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) hitRadius: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) hoverBackgroundColor: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) hoverBorderColor: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) hoverBorderRadius: NumberString,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) hoverBorderWidth: Option<NumberStringOrT<Border>>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) axis: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) inflateAmount: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) label: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) maxBarThickness: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) minBarLength: NumberString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) order: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) pointBackgroundColor: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) pointBorderColor: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) pointBorderWidth: Option<NumberStringOrT<Border>>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) pointHitRadius: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) pointHoverBackgroundColor: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) pointHoverBorderWidth: Option<NumberStringOrT<Border>>,
+    #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
+    pub(crate) pointHoverRadius: NumberOrDateString,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) pointRadius: NumberString,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) pointStyle: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) segment: Option<Segment>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) skipNull: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) spanGaps: Option<bool>,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) stack: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) stepped: Option<BoolString>,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) tension: NumberString,
+    #[serde(rename = "type")]
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) r#type: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) xAxisID: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) yAxisID: String,
+    #[serde(skip_serializing_if = "NumberString::is_empty", default)]
+    pub(crate) z: NumberString,
+}
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 pub struct XYPoint {
     #[serde(skip_serializing_if = "NumberOrDateString::is_empty", default)]
@@ -825,6 +930,18 @@ impl DatasetTrait for Vec<XYDataset> {
             .flatten()
             .collect::<Vec<_>>();
         // gloo_console::console_dbg!(&vec);
+
+        vec.sort_by(crate::get_order_fn);
+        vec.dedup();
+        vec
+    }
+}
+impl DatasetTrait for Vec<FloatingDataset> {
+    fn labels(self) -> Vec<NumberOrDateString> {
+        let mut vec = self
+            .into_iter()
+            .map(|spd| spd.label.into())
+            .collect::<Vec<_>>();
 
         vec.sort_by(crate::get_order_fn);
         vec.dedup();

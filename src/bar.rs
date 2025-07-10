@@ -3,19 +3,20 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::{objects::*, ChartExt};
+use crate::{objects::*, ChartExt, DatasetTrait};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
-pub struct Bar {
+#[serde(bound = "D: DatasetTrait")]
+pub struct Bar<D: DatasetTrait> {
     #[serde(rename = "type")]
     r#type: BarString,
-    data: Dataset<Vec<XYDataset>>,
+    data: Dataset<D>,
     options: ChartOptions,
     id: String,
 }
 
-impl ChartExt for Bar {
-    type DS = Dataset<Vec<XYDataset>>;
+impl<D: DatasetTrait> ChartExt for Bar<D> {
+    type DS = Dataset<D>;
 
     fn get_id(self) -> String {
         self.id
