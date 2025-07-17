@@ -81,7 +81,7 @@ fn main() {
                             l_name
                         };
                     let get_name = syn::Ident::new(
-                        &format!("get_{}", set_name),
+                        &format!("get_{set_name}"),
                         proc_macro2::Span::call_site(),
                     );
                     let set_name = ident(set_name).unwrap();
@@ -316,9 +316,10 @@ fn ident(i: &str) -> Result<syn::Type, syn::Error> {
 // fn append_log(s: impl std::fmt::Debug) {
 //     let mut file = std::fs::OpenOptions::new()
 //         .append(true)
+//         .create(true)
 //         .open("build_logs.txt")
 //         .unwrap();
 
-//     file.write_all(format!("{:#?}", s).as_bytes()).unwrap();
+//     file.write_all(format!("{s:#?}").as_bytes()).unwrap();
 //     file.write_all(b"\n").unwrap();
 // }

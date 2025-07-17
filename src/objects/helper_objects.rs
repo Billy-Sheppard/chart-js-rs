@@ -1,3 +1,5 @@
+#![allow(unreachable_patterns)]
+
 use {
     crate::traits::*,
     js_sys::{Function, Reflect},
@@ -50,8 +52,12 @@ impl DatasetTrait for NoDatasets {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(bound = "D: DatasetTrait")]
+#[allow(unreachable_patterns)]
 pub struct Dataset<D: DatasetTrait> {
     datasets: D,
+    #[serde(skip_serializing_if = "Option::is_none", rename(serialize = "labels"))]
+    forced_labels: Option<Vec<NumberOrDateString>>,
+    #[serde(skip_serializing_if = "option_vec_is_none")]
     labels: Option<Vec<NumberOrDateString>>,
 }
 impl<D: DatasetTrait> Dataset<D> {
@@ -59,26 +65,43 @@ impl<D: DatasetTrait> Dataset<D> {
         Self {
             datasets: D::default(),
             labels: None,
+            forced_labels: None,
         }
     }
+
     pub fn get_datasets(&mut self) -> &mut D {
         &mut self.datasets
     }
+
     pub fn datasets(mut self, datasets: impl Into<D>) -> Self {
         self.datasets = datasets.into();
         let labels = self.datasets.clone();
-        self.labels(labels.labels())
+        self._labels(labels.labels())
     }
+
     pub fn get_labels(&mut self) -> &mut Option<Vec<NumberOrDateString>> {
         &mut self.labels
     }
+
+    fn _labels<T: Into<NumberOrDateString>>(mut self, labels: impl IntoIterator<Item = T>) -> Self {
+        self.labels = Some(labels.into_iter().map(Into::into).collect());
+
+        self
+    }
+
     pub fn labels<T: Into<NumberOrDateString>>(
         mut self,
         labels: impl IntoIterator<Item = T>,
     ) -> Self {
-        self.labels = Some(labels.into_iter().map(Into::into).collect());
-        
+        self.forced_labels = Some(labels.into_iter().map(Into::into).collect());
+
         self
+    }
+}
+fn option_vec_is_none<T: Default + PartialEq + Clone>(opt: &Option<Vec<T>>) -> bool {
+    match opt {
+        Some(vec) => vec.is_empty() || vec.clone().try_into() == Ok([T::default()]),
+        None => true,
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

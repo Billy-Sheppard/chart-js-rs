@@ -229,7 +229,7 @@ impl Model {
         // construct and render chart here
         let id = "bar";
 
-        let chart = Bar::new(id)
+        let chart = Bar::<Vec<_>>::new(id)
             // we use <NoAnnotations> here to type hint for the compiler
             .data(
                 Dataset::new()
