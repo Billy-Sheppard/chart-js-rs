@@ -75,12 +75,20 @@ impl<D: DatasetTrait> Dataset<D> {
 
     pub fn datasets(mut self, datasets: impl Into<D>) -> Self {
         self.datasets = datasets.into();
-        let labels = self.datasets.clone();
-        self._labels(labels.labels())
+
+        if self.forced_labels.is_none() {
+            let labels = self.datasets.clone();
+            self._labels(labels.labels())
+        } else {
+            self
+        }
     }
 
     pub fn get_labels(&mut self) -> &mut Option<Vec<NumberOrDateString>> {
-        &mut self.labels
+        match (&self.labels, &self.forced_labels) {
+            (Some(_), None) => &mut self.labels,
+            _ => &mut self.forced_labels,
+        }
     }
 
     fn _labels<T: Into<NumberOrDateString>>(mut self, labels: impl IntoIterator<Item = T>) -> Self {
@@ -94,6 +102,7 @@ impl<D: DatasetTrait> Dataset<D> {
         labels: impl IntoIterator<Item = T>,
     ) -> Self {
         self.forced_labels = Some(labels.into_iter().map(Into::into).collect());
+        self.labels = None;
 
         self
     }
