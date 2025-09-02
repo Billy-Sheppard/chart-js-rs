@@ -10,6 +10,7 @@ pub mod objects;
 pub mod pie;
 pub mod scatter;
 pub mod traits;
+pub mod worker;
 
 #[doc(hidden)]
 mod utils;
@@ -43,6 +44,7 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
         self
     }
 
+    #[cfg(not(feature = "workers"))]
     fn into_chart(self) -> Chart {
         Chart {
             obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
@@ -52,6 +54,19 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
             plugins: String::new(),
             defaults: String::new(),
         }
+    }
+
+    #[cfg(feature = "workers")]
+    async fn into_chart(self) -> Result<Chart, wasm_bindgen::JsValue> {
+        Ok(Chart {
+            obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
+                .expect("Unable to serialize chart."),
+            id: self.get_id(),
+            mutate: false,
+            plugins: String::new(),
+            defaults: String::new(),
+            worker: worker::run().await?.into(),
+        })
     }
 
     fn get_chart_from_id(id: &str) -> Option<Self> {

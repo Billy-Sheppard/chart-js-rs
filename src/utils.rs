@@ -2,6 +2,8 @@ use js_sys::{Array, Object, Reflect};
 use std::cell::RefCell;
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 
+#[cfg(feature = "workers")]
+use crate::worker;
 use crate::{exports::*, BoolString, FnWithArgs, FnWithArgsOrT, NumberString};
 
 pub fn get_order_fn(
@@ -55,6 +57,8 @@ pub struct Chart {
     pub(crate) mutate: bool,
     pub(crate) plugins: String,
     pub(crate) defaults: String,
+    #[cfg(feature = "workers")]
+    pub(crate) worker: std::sync::Arc<tokio::sync::mpsc::UnboundedSender<JsValue>>,
 }
 
 /// Walks the JsValue object to get the value of a nested property
@@ -119,12 +123,27 @@ impl Chart {
 
     pub fn render(self) {
         self.rationalise_js();
+
+        #[cfg(not(feature = "workers"))]
         render_chart(self.obj, &self.id, self.mutate, self.plugins, self.defaults);
+
+        #[cfg(feature = "workers")]
+        self.worker.send(worker::render_msg(self.obj, &self.id, self.mutate, self.plugins, self.defaults));
     }
 
+    /// If running with `workers` feature enabled,
+    /// returned value is always true, regardless of reality.
     pub fn update(self, animate: bool) -> bool {
         self.rationalise_js();
-        update_chart(self.obj, &self.id, animate)
+
+        #[cfg(not(feature = "workers"))]
+        update_chart(self.obj, &self.id, animate);
+
+        #[cfg(feature = "workers")]
+        {
+            self.worker.send(worker::update_msg(self.obj, &self.id, animate));
+            true
+        }
     }
 
     /// Converts serialized FnWithArgs to JS Function's
