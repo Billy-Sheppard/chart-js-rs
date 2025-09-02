@@ -17,8 +17,8 @@ pub struct Scatter {
 impl ChartExt for Scatter {
     type DS = Dataset<Vec<XYDataset>>;
 
-    fn get_id(self) -> String {
-        self.id
+    fn get_id(&self) -> &str {
+        &self.id
     }
     fn id(mut self, id: String) -> Self {
         self.id = id;

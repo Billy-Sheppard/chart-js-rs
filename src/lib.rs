@@ -28,7 +28,7 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
         Self::default().id(id.as_ref().into())
     }
 
-    fn get_id(self) -> String;
+    fn get_id(&self) -> &str;
     fn id(self, id: String) -> Self;
 
     fn get_data(&mut self) -> &mut Self::DS;
@@ -47,7 +47,7 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
         Chart {
             obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
                 .expect("Unable to serialize chart."),
-            id: self.get_id(),
+            id: self.get_id().into(),
             mutate: false,
             plugins: String::new(),
             defaults: String::new(),

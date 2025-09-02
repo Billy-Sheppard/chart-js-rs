@@ -1,6 +1,6 @@
 [package]
 name = "chart-js-rs"
-version = "0.0.57"
+version = "0.0.58"
 edition = "2021"
 authors = ["Billy Sheppard", "Luis Moreno"]
 license = "Apache-2.0"
@@ -30,4 +30,4 @@ heck = "0.5.0"
 itertools = "0.14.0"
 quote = "1.0.40"
 proc-macro2 = "1.0.95"
-syn = { features = ["parsing", "full"], version = "2.0.104" }
+syn = { features = ["parsing", "full"], version = "2.0.106" }

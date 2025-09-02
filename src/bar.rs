@@ -18,8 +18,8 @@ pub struct Bar<D: DatasetTrait> {
 impl<D: DatasetTrait> ChartExt for Bar<D> {
     type DS = Dataset<D>;
 
-    fn get_id(self) -> String {
-        self.id
+    fn get_id(&self) -> &str {
+        &self.id
     }
     fn id(mut self, id: String) -> Self {
         self.id = id;

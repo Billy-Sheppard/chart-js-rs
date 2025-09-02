@@ -16,8 +16,8 @@ pub struct Doughnut {
 impl ChartExt for Doughnut {
     type DS = Dataset<Vec<SinglePointDataset>>;
 
-    fn get_id(self) -> String {
-        self.id
+    fn get_id(&self) -> &str {
+        &self.id
     }
     fn id(mut self, id: String) -> Self {
         self.id = id;
