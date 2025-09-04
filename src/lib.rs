@@ -44,7 +44,6 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
         self
     }
 
-    #[cfg(not(feature = "workers"))]
     fn into_chart(self) -> Chart {
         Chart {
             obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
@@ -53,11 +52,14 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
             mutate: false,
             plugins: String::new(),
             defaults: String::new(),
+            #[cfg(feature = "workers")]
+            worker: None,
         }
     }
 
     #[cfg(feature = "workers")]
-    async fn into_chart(self) -> Result<Chart, wasm_bindgen::JsValue> {
+    #[allow(async_fn_in_trait)]
+    async fn into_worker_chart(self) -> Result<Chart, Box<dyn std::error::Error>> {
         Ok(Chart {
             obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
                 .expect("Unable to serialize chart."),
@@ -65,7 +67,7 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
             mutate: false,
             plugins: String::new(),
             defaults: String::new(),
-            worker: worker::run().await?.into(),
+            worker: Some(crate::worker::ChartWorker::new().await?),
         })
     }
 

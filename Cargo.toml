@@ -24,8 +24,11 @@ uuid = { version = "1.17.0", features = ["v4", "js"] }
 web-sys = { version = "0.3.77", optional = true, features = [
     "WorkerOptions",
     "WorkerType",
+    "HtmlCanvasElement",
+    "OffscreenCanvas",
 ] }
 tokio = { version = "1.47.1", features = ["sync"], optional = true }
+itertools = "0.14.0"
 
 [workspace]
 members = ["examples"]
