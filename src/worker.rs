@@ -1,7 +1,7 @@
 use gloo_console::console_dbg;
 use gloo_utils::{document, window};
 use itertools::Itertools;
-use js_sys::{decode_uri_component, Array, Function, Object, Reflect};
+use js_sys::{ Array, Function, Object, Reflect};
 use tokio::sync::broadcast::{self};
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{MessageEvent, Worker, WorkerOptions, WorkerType};
@@ -297,26 +297,28 @@ impl ChartWorker {
 }
 
 fn shim_blob() -> String {
-    let imports = js_sys::eval(
+    let _imports = js_sys::eval(
         "[...document.head.querySelectorAll('script')].map(s => s.src).filter(Boolean)",
     )
-    .map(|v| Array::from(&v.into()))
+    .map(|v| Array::from(&v))
     .unwrap_or_default();
 
-    let shim = WORKER_SHIM.replace(
-        "/// IMPORTS",
-        &imports
-            .into_iter()
-            .map(|v| decode_uri_component(&v.as_string().unwrap()).unwrap())
-            .map(|v| format!("await import (\"{v}\")"))
-            // .chain([format!(
-            //     "import * as callbacks from \"{}/{}\"",
-            //     window().location().origin().unwrap(),
-            //     "/examples/chart_js_rs_example.js"
-            // )])
-            .collect::<Vec<_>>()
-            .join("\n"),
-    );
+    let shim = WORKER_SHIM
+    // .replace(
+    //     "/// IMPORTS",
+    //     &_imports
+    //         .into_iter()
+    //         .map(|v| decode_uri_component(&v.as_string().unwrap()).unwrap())
+    //         .map(|v| format!("await import (\"{v}\")"))
+    //         // .chain([format!(
+    //         //     "import * as callbacks from \"{}/{}\"",
+    //         //     window().location().origin().unwrap(),
+    //         //     "/examples/chart_js_rs_example.js"
+    //         // )])
+    //         .collect::<Vec<_>>()
+    //         .join("\n"),
+    // )
+    ;
 
     web_sys::Url::create_object_url_with_blob(
         &web_sys::Blob::new_with_blob_sequence_and_options(

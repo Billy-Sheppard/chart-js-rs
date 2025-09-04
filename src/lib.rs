@@ -63,7 +63,7 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
         Ok(Chart {
             obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
                 .expect("Unable to serialize chart."),
-            id: self.get_id(),
+            id: self.get_id().into(),
             mutate: false,
             plugins: String::new(),
             defaults: String::new(),
