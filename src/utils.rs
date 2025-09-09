@@ -140,7 +140,8 @@ impl Chart {
                 .render(self.obj, &self.id, self.mutate, self.plugins, self.defaults)
                 .await
         } else {
-            Ok(self.render())
+            self.render();
+            Ok(())
         }
     }
 
@@ -156,10 +157,7 @@ impl Chart {
     }
 
     #[cfg(feature = "workers")]
-    pub async fn update_async(
-        self,
-        animate: bool,
-    ) -> Result<bool, Box<dyn std::error::Error>> {
+    pub async fn update_async(self, animate: bool) -> Result<bool, Box<dyn std::error::Error>> {
         if let Some(worker) = self.worker {
             worker.update(self.obj, &self.id, animate).await
         } else {

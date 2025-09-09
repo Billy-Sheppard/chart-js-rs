@@ -1,7 +1,7 @@
 use gloo_console::console_dbg;
 use gloo_utils::{document, window};
 use itertools::Itertools;
-use js_sys::{ Array, Function, Object, Reflect};
+use js_sys::{Array, Function, Object, Reflect};
 use tokio::sync::broadcast::{self};
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{MessageEvent, Worker, WorkerOptions, WorkerType};
@@ -55,6 +55,8 @@ pub(crate) enum MessageContent {
 
     Render {
         canvas: JsValue,
+        width: JsValue,
+        height: JsValue,
         obj: JsValue,
         id: String,
         mutate: bool,
@@ -71,9 +73,9 @@ pub(crate) enum MessageContent {
     Other,
 }
 
-impl Into<JsValue> for MessageContent {
-    fn into(self) -> JsValue {
-        match self {
+impl From<MessageContent> for JsValue {
+    fn from(val: MessageContent) -> Self {
+        match val {
             MessageContent::CallbackRequest { function, args } => obj! {
                 "function" => function,
                 "args" => args
@@ -83,6 +85,8 @@ impl Into<JsValue> for MessageContent {
             },
             MessageContent::Render {
                 canvas,
+                width,
+                height,
                 obj,
                 id,
                 mutate,
@@ -90,6 +94,8 @@ impl Into<JsValue> for MessageContent {
                 defaults,
             } => obj! {
                 "canvas" => canvas,
+                "width" => width,
+                "height" => height,
                 "obj" => obj,
                 "id" => id,
                 "mutate" => mutate,
@@ -114,14 +120,14 @@ impl Into<JsValue> for MessageContent {
 
 impl From<JsValue> for MessageContent {
     fn from(value: JsValue) -> Self {
-        console_dbg!(value);
+        // console_dbg!(value);
 
         if !value.is_object() {
             return Self::Other;
         }
 
         destructure!(
-            value => function, args, data, canvas, obj, id, mutate, plugins, defaults, updated, animate
+            value => function, args, data, canvas, width, height, obj, id, mutate, plugins, defaults, updated, animate
         );
 
         if_let_all!(function, args => {
@@ -137,9 +143,11 @@ impl From<JsValue> for MessageContent {
 
         {
             let id = id.clone();
-            if_let_all!(canvas, obj, id, mutate, plugins, defaults => {
+            if_let_all!(canvas, width, height, obj, id, mutate, plugins, defaults => {
                 return MessageContent::Render {
                     canvas,
+                    width,
+                    height,
                     obj,
                     id: id.as_string().unwrap_or_default(),
                     mutate: mutate.as_bool().unwrap_or_default(),
@@ -177,6 +185,10 @@ impl ChartWorker {
         defaults: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let canvas_element = document().get_element_by_id(id).unwrap();
+
+        let width = canvas_element.client_width();
+        let height = canvas_element.client_height();
+
         let offscreen_canvas = canvas_element
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .unwrap()
@@ -186,6 +198,8 @@ impl ChartWorker {
         self.send(
             MessageContent::Render {
                 canvas: offscreen_canvas.clone().into(),
+                width: width.into(),
+                height: height.into(),
                 obj,
                 id: id.to_string(),
                 mutate,
@@ -204,26 +218,25 @@ impl ChartWorker {
         id: &String,
         animate: bool,
     ) -> Result<bool, Box<dyn std::error::Error>> {
-        Ok(self
-            .send(
-                MessageContent::Update {
-                    updated,
-                    id: id.to_string(),
-                    animate,
-                },
-                &[],
-            )
-            .await
-            .map(|v| v.as_bool().unwrap_or_default())?)
+        self.send(
+            MessageContent::Update {
+                updated,
+                id: id.to_string(),
+                animate,
+            },
+            &[],
+        )
+        .await
+        .map(|v| v.as_bool().unwrap_or_default())
     }
 
-    pub(crate) async fn new() -> Result<Self, Box<dyn std::error::Error>> {
+    pub(crate) async fn new(imports_block: &str) -> Result<Self, Box<dyn std::error::Error>> {
         // Spawn Worker
         let worker_options = WorkerOptions::new();
         worker_options.set_type(WorkerType::Module);
 
         let from_worker = broadcast::channel::<(String, MessageContent)>(1).0;
-        let worker = Worker::new_with_options(&shim_blob(), &worker_options)
+        let worker = Worker::new_with_options(&shim_blob(imports_block), &worker_options)
             .map_err(|e| format!("{e:?}"))?;
 
         let handler = {
@@ -296,29 +309,14 @@ impl ChartWorker {
     }
 }
 
-fn shim_blob() -> String {
+fn shim_blob(imports_block: &str) -> String {
     let _imports = js_sys::eval(
         "[...document.head.querySelectorAll('script')].map(s => s.src).filter(Boolean)",
     )
     .map(|v| Array::from(&v))
     .unwrap_or_default();
 
-    let shim = WORKER_SHIM
-    // .replace(
-    //     "/// IMPORTS",
-    //     &_imports
-    //         .into_iter()
-    //         .map(|v| decode_uri_component(&v.as_string().unwrap()).unwrap())
-    //         .map(|v| format!("await import (\"{v}\")"))
-    //         // .chain([format!(
-    //         //     "import * as callbacks from \"{}/{}\"",
-    //         //     window().location().origin().unwrap(),
-    //         //     "/examples/chart_js_rs_example.js"
-    //         // )])
-    //         .collect::<Vec<_>>()
-    //         .join("\n"),
-    // )
-    ;
+    let shim = WORKER_SHIM.replace("/// IMPORTS", imports_block);
 
     web_sys::Url::create_object_url_with_blob(
         &web_sys::Blob::new_with_blob_sequence_and_options(

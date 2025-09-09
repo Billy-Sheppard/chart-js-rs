@@ -10,6 +10,8 @@ use wasm_bindgen_futures::spawn_local;
 
 mod utils;
 
+const WORKER_IMPORTS: &str = include_str!("../worker_imports.js");
+
 fn random() -> Vec<usize> {
     let rnd = (0..=20).map(|_| {
         let mut buf: [u8; 32] = Default::default();
@@ -334,7 +336,7 @@ impl Model {
            .after_inserted(move |_| {
                 spawn_local(async {
                     gloo::console::log!("Starting render...");
-                    chart.into_worker_chart().await.unwrap().mutate().render_async().await.unwrap();
+                    chart.into_worker_chart(WORKER_IMPORTS).await.unwrap().mutate().render_async().await.unwrap();
                     gloo::console::log!("Completed render!");
                 });
             })
@@ -636,6 +638,11 @@ pub fn show_line_ticks(this: String, index: u32, _ticks: JsValue) -> String {
 
 #[wasm_bindgen(start)]
 pub async fn main_js() -> Result<(), JsValue> {
+    // this allows the wasm_bindgen to export the functions in the worker but not run any code
+    if is_worker() {
+        return Ok(());
+    }
+
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
     let app = Model::init().await;

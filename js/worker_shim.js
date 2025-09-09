@@ -1,57 +1,31 @@
 console.log('Chart worker ready');
 
+self.window = {
+    callbacks: {} //callbacks
+};
+
 (async () => {
     /// IMPORTS
-    // Import Chart.js first
-    await import("https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js");
-    
-    // Import Luxon with explicit global setup
-    await import("https://cdn.jsdelivr.net/npm/luxon@^2/build/global/luxon.min.js");
-    
-    // Ensure luxon is properly set up globally
-    if (typeof self.luxon === 'undefined') {
-        // If the global version didn't work, try importing the ESM version
-        const luxonESM = await import("https://cdn.jsdelivr.net/npm/luxon@^2/+esm");
-        self.luxon = luxonESM;
-    }
-    
-    // Verify DateTime and its constants are available
-    if (self.luxon && self.luxon.DateTime && self.luxon.DateTime.DATETIME_MED_WITH_SECONDS) {
-        console.log('DateTime constants available');
-    } else {
-        console.error('DateTime constants not available');
-    }
-    
-    // Now import the adapter
-    await import("https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1/dist/chartjs-adapter-luxon.umd.min.js");
 })().then(() => {
-    const window = {
-        mutate_chart_object: function (v) {
-            if (v.id == "bar") {
-                v.options.scales.y1.ticks = {
-                    callback:
-                        function (value, _index, _values) {
-                            return '$' + value.toFixed(2);
-                        }
-                };
-            }
-            return v
-        },
-
-        callbacks: {} //callbacks
-    }
-
     const is_obj = x => typeof x === 'object' && !Array.isArray(x) && x !== null;
     const derationalize = (o) => {
+
+        // Handle arrays separately
+        if (Array.isArray(o)) {
+            return o.map((item, index) => {
+                return derationalize(item);
+            });
+        }
+
         if (!is_obj(o)) {
             return o;
         } else if ('args' in o && 'body' in o && 'closure_id' in o && 'return_value' in o) {
             let { args, body, closure_id, return_value } = o;
-            console.debug();
 
             if (closure_id) {
-                return Function(...args, `{ return window.callbacks['${closure_id}'](${args.join(', ')}) }`);
-
+                return Function(...args, `{ 
+                return 'orange';
+            }`);
             } else {
                 return Function(...args, `{ ${body} \n return ${return_value} }`);
             }
@@ -62,16 +36,16 @@ console.log('Chart worker ready');
         }
     }
 
-    console.log("sending ready");
+    // console.log("sending ready");
     self.postMessage("");
 
     self.onmessage = (async event => {
         try {
             let [transaction, data] = event.data ?? [];
-            console.log(transaction, data);
+            // console.log(transaction, data);
 
             let {
-                canvas,
+                canvas, width, height,
                 obj, mutate, plugins, defaults, // render()
                 updated, animate                // update()
             } = (data ?? {});
@@ -94,14 +68,13 @@ console.log('Chart worker ready');
             if (updated) updated = derationalize(updated);
 
             if (!updated) {
-                console.log('new chart', canvas, obj)
-                const chart = new Chart(canvas, obj);
-                console.log('chart newed')
-                // const { width, height } = canvas.getClientBoundingRect();
+                console.log('New Chart');
 
-                // canvas.width = width;
-                // canvas.height = height;
-                // chart.resize();
+                canvas.width = width;
+                canvas.height = height;
+
+                const chart = new Chart(canvas, obj);
+                chart.resize();
             } else {
                 try {
                     let chart = Chart.getChart(canvas);
@@ -113,16 +86,17 @@ console.log('Chart worker ready');
 
                     if (animate) {
                         chart.update();
+                        chart.resize();
                     } else {
                         chart.update('none');
                     }
                 } catch {
-                    console.log("sending update failure");
+                    // console.log("sending update failure");
                     postMessage([transaction, false])
                 }
             }
 
-            console.log("sending success");
+            // console.log("sending success");
             postMessage([transaction, true])
         } catch (e) {
             console.error(e);

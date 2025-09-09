@@ -21,6 +21,8 @@ pub use objects::*;
 use serde::{de::DeserializeOwned, Serialize};
 pub use traits::*;
 pub use utils::*;
+use wasm_bindgen::JsCast;
+use web_sys::WorkerGlobalScope;
 
 pub trait ChartExt: DeserializeOwned + Serialize + Default {
     type DS;
@@ -59,7 +61,10 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
 
     #[cfg(feature = "workers")]
     #[allow(async_fn_in_trait)]
-    async fn into_worker_chart(self) -> Result<Chart, Box<dyn std::error::Error>> {
+    async fn into_worker_chart(
+        self,
+        imports_block: &str,
+    ) -> Result<Chart, Box<dyn std::error::Error>> {
         Ok(Chart {
             obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
                 .expect("Unable to serialize chart."),
@@ -67,7 +72,7 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
             mutate: false,
             plugins: String::new(),
             defaults: String::new(),
-            worker: Some(crate::worker::ChartWorker::new().await?),
+            worker: Some(crate::worker::ChartWorker::new(imports_block).await?),
         })
     }
 
@@ -80,4 +85,10 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
             })
             .ok()
     }
+}
+
+pub fn is_worker() -> bool {
+    js_sys::global()
+        .dyn_into::<WorkerGlobalScope>()
+        .is_ok()
 }
