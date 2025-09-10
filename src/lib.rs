@@ -12,16 +12,18 @@ pub mod scatter;
 pub mod traits;
 pub mod worker;
 
+pub use objects::*;
+pub use traits::*;
+pub use utils::*;
+pub use worker_chart::*;
+
 #[doc(hidden)]
 mod utils;
 
 use exports::get_chart;
 use gloo_utils::format::JsValueSerdeExt;
-pub use objects::*;
 use serde::{de::DeserializeOwned, Serialize};
-pub use traits::*;
-pub use utils::*;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{self, prelude::*};
 use web_sys::WorkerGlobalScope;
 
 pub trait ChartExt: DeserializeOwned + Serialize + Default {
@@ -54,26 +56,7 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
             mutate: false,
             plugins: String::new(),
             defaults: String::new(),
-            #[cfg(feature = "workers")]
-            worker: None,
         }
-    }
-
-    #[cfg(feature = "workers")]
-    #[allow(async_fn_in_trait)]
-    async fn into_worker_chart(
-        self,
-        imports_block: &str,
-    ) -> Result<Chart, Box<dyn std::error::Error>> {
-        Ok(Chart {
-            obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
-                .expect("Unable to serialize chart."),
-            id: self.get_id().into(),
-            mutate: false,
-            plugins: String::new(),
-            defaults: String::new(),
-            worker: Some(crate::worker::ChartWorker::new(imports_block).await?),
-        })
     }
 
     fn get_chart_from_id(id: &str) -> Option<Self> {
@@ -88,7 +71,68 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
 }
 
 pub fn is_worker() -> bool {
-    js_sys::global()
-        .dyn_into::<WorkerGlobalScope>()
-        .is_ok()
+    js_sys::global().dyn_into::<WorkerGlobalScope>().is_ok()
+}
+
+#[cfg(feature = "workers")]
+mod worker_chart {
+    use crate::*;
+
+    pub trait WorkerChartExt: ChartExt {
+        #[allow(async_fn_in_trait)]
+        async fn into_worker_chart(
+            self,
+            imports_block: &str,
+        ) -> Result<WorkerChart, Box<dyn std::error::Error>> {
+            Ok(WorkerChart {
+                obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
+                    .expect("Unable to serialize chart."),
+                id: self.get_id().into(),
+                mutate: false,
+                plugins: String::new(),
+                defaults: String::new(),
+                worker: crate::worker::ChartWorker::new(imports_block).await?,
+            })
+        }
+    }
+    #[wasm_bindgen]
+    #[derive(Clone)]
+    #[must_use = "\nAppend .render_async()\n"]
+    pub struct WorkerChart {
+        pub(crate) obj: JsValue,
+        pub(crate) id: String,
+        pub(crate) mutate: bool,
+        pub(crate) plugins: String,
+        pub(crate) defaults: String,
+        pub(crate) worker: crate::worker::ChartWorker,
+    }
+    impl WorkerChart {
+        pub async fn render_async(self) -> Result<(), Box<dyn std::error::Error>> {
+            self.worker
+                .render(self.obj, &self.id, self.mutate, self.plugins, self.defaults)
+                .await
+        }
+
+        pub async fn update_async(self, animate: bool) -> Result<bool, Box<dyn std::error::Error>> {
+            self.worker.update(self.obj, &self.id, animate).await
+        }
+
+        #[must_use = "\nAppend .render_async()\n"]
+        pub fn mutate(&mut self) -> Self {
+            self.mutate = true;
+            self.clone()
+        }
+
+        #[must_use = "\nAppend .render_async()\n"]
+        pub fn plugins(&mut self, plugins: impl Into<String>) -> Self {
+            self.plugins = plugins.into();
+            self.clone()
+        }
+
+        #[must_use = "\nAppend .render_async()\n"]
+        pub fn defaults(&mut self, defaults: impl Into<String>) -> Self {
+            self.defaults = format!("{}\n{}", self.defaults, defaults.into());
+            self.to_owned()
+        }
+    }
 }

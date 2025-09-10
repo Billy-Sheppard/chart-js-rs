@@ -55,8 +55,6 @@ pub struct Chart {
     pub(crate) mutate: bool,
     pub(crate) plugins: String,
     pub(crate) defaults: String,
-    #[cfg(feature = "workers")]
-    pub(crate) worker: Option<crate::worker::ChartWorker>,
 }
 
 /// Walks the JsValue object to get the value of a nested property
@@ -124,45 +122,13 @@ impl Chart {
     pub fn render(self) {
         self.rationalise_js();
 
-        #[cfg(not(feature = "workers"))]
         render_chart(self.obj, &self.id, self.mutate, self.plugins, self.defaults);
-
-        #[cfg(feature = "workers")]
-        if self.worker.is_none() {
-            render_chart(self.obj, &self.id, self.mutate, self.plugins, self.defaults);
-        }
-    }
-
-    #[cfg(feature = "workers")]
-    pub async fn render_async(self) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(worker) = self.worker {
-            worker
-                .render(self.obj, &self.id, self.mutate, self.plugins, self.defaults)
-                .await
-        } else {
-            self.render();
-            Ok(())
-        }
     }
 
     /// This should not be used on a chart with a worker attached.
     /// If it is, it will always return `false`
     pub fn update(self, animate: bool) -> bool {
-        #[cfg(feature = "workers")]
-        if self.worker.is_some() {
-            return false;
-        }
-
         update_chart(self.obj, &self.id, animate)
-    }
-
-    #[cfg(feature = "workers")]
-    pub async fn update_async(self, animate: bool) -> Result<bool, Box<dyn std::error::Error>> {
-        if let Some(worker) = self.worker {
-            worker.update(self.obj, &self.id, animate).await
-        } else {
-            Ok(self.update(animate))
-        }
     }
 
     /// Converts serialized FnWithArgs to JS Function's

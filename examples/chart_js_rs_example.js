@@ -270,32 +270,29 @@ export function show_line_ticks(_this, index, _ticks) {
     }
 }
 
-/**
- * @returns {Promise<void>}
- */
 export function main_js() {
     wasm.main_js();
 }
 
 function __wbg_adapter_52(arg0, arg1, arg2) {
-    const ret = wasm.closure185_externref_shim(arg0, arg1, arg2);
+    const ret = wasm.closure142_externref_shim(arg0, arg1, arg2);
     return ret;
 }
 
 function __wbg_adapter_55(arg0, arg1, arg2) {
-    wasm.closure187_externref_shim(arg0, arg1, arg2);
+    wasm.closure144_externref_shim(arg0, arg1, arg2);
 }
 
 function __wbg_adapter_58(arg0, arg1, arg2) {
-    wasm.closure204_externref_shim(arg0, arg1, arg2);
+    wasm.closure201_externref_shim(arg0, arg1, arg2);
 }
 
 function __wbg_adapter_61(arg0, arg1, arg2) {
-    wasm.closure207_externref_shim(arg0, arg1, arg2);
+    wasm.closure204_externref_shim(arg0, arg1, arg2);
 }
 
 function __wbg_adapter_64(arg0, arg1, arg2) {
-    wasm.closure215_externref_shim(arg0, arg1, arg2);
+    wasm.closure212_externref_shim(arg0, arg1, arg2);
 }
 
 const __wbindgen_enum_WorkerType = ["classic", "module"];
@@ -316,6 +313,25 @@ export class Chart {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_chart_free(ptr, 0);
+    }
+}
+
+const WorkerChartFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_workerchart_free(ptr >>> 0, 1));
+
+export class WorkerChart {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WorkerChartFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_workerchart_free(ptr, 0);
     }
 }
 
@@ -776,10 +792,6 @@ function __wbg_get_imports() {
         const ret = Promise.resolve(arg0);
         return ret;
     };
-    imports.wbg.__wbg_scrollWidth_beae9e507c1f9138 = function(arg0) {
-        const ret = arg0.scrollWidth;
-        return ret;
-    };
     imports.wbg.__wbg_search_7ab96fc60e23eaf5 = function() { return handleError(function (arg0, arg1) {
         const ret = arg1.search;
         const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -917,24 +929,24 @@ function __wbg_get_imports() {
         const ret = false;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper861 = function(arg0, arg1, arg2) {
-        const ret = makeClosure(arg0, arg1, 184, __wbg_adapter_52);
+    imports.wbg.__wbindgen_closure_wrapper633 = function(arg0, arg1, arg2) {
+        const ret = makeClosure(arg0, arg1, 141, __wbg_adapter_52);
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper863 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 184, __wbg_adapter_55);
+    imports.wbg.__wbindgen_closure_wrapper635 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 141, __wbg_adapter_55);
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper907 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 203, __wbg_adapter_58);
+    imports.wbg.__wbindgen_closure_wrapper905 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 200, __wbg_adapter_58);
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper911 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 206, __wbg_adapter_61);
+    imports.wbg.__wbindgen_closure_wrapper909 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 203, __wbg_adapter_61);
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper953 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 214, __wbg_adapter_64);
+    imports.wbg.__wbindgen_closure_wrapper951 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 211, __wbg_adapter_64);
         return ret;
     };
     imports.wbg.__wbindgen_debug_string = function(arg0, arg1) {

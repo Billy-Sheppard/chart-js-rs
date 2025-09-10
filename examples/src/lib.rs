@@ -46,7 +46,7 @@ pub struct Model {
     y2: Mutable<Arc<Vec<usize>>>,
 }
 impl Model {
-    async fn init() -> Arc<Self> {
+    fn init() -> Arc<Self> {
         let query_string = gloo::utils::window()
             .location()
             .search()
@@ -657,7 +657,7 @@ pub fn show_line_ticks(this: String, index: u32, _ticks: JsValue) -> String {
 }
 
 #[wasm_bindgen(start)]
-pub async fn main_js() -> Result<(), JsValue> {
+pub fn main_js() -> Result<(), JsValue> {
     // this allows the wasm_bindgen to export the functions in the worker but not run any code
     if is_worker() {
         return Ok(());
@@ -665,7 +665,7 @@ pub async fn main_js() -> Result<(), JsValue> {
 
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-    let app = Model::init().await;
+    let app = Model::init();
     dominator::append_dom(&dominator::body(), Model::render(app));
     Ok(())
 }

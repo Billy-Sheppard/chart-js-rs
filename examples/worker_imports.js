@@ -1,4 +1,6 @@
-const wasm = await import('http://localhost:8080/chart_js_rs_example.js');
+const origin = self.location.origin;
+const wasm = await import(`${origin}/chart_js_rs_example.js`);
+
 self.window.callbacks = wasm;
 await wasm.default();
 
