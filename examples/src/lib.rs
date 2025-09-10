@@ -12,8 +12,21 @@ mod utils;
 
 const WORKER_IMPORTS: &str = include_str!("../worker_imports.js");
 
+fn limit() -> usize {
+    if gloo::utils::window()
+        .location()
+        .search()
+        .unwrap_or_default()
+        .contains("async")
+    {
+        100
+    } else {
+        20
+    }
+}
+
 fn random() -> Vec<usize> {
-    let rnd = (0..=20).map(|_| {
+    let rnd = (0..=limit()).map(|_| {
         let mut buf: [u8; 32] = Default::default();
         getrandom::getrandom(&mut buf).unwrap();
         let mut rng = rand::prelude::StdRng::from_seed(buf);
@@ -44,10 +57,11 @@ impl Model {
             .tuples::<(&str, &str)>()
             .collect::<BTreeMap<&str, &str>>();
 
+        let chart = query.get("chart").cloned().unwrap_or("scatter");
         Arc::new(Model {
             tick: Mutable::default(),
-            chart: Mutable::new(query.get("chart").cloned().unwrap_or("scatter").into()),
-            x: Mutable::new(Arc::new((0..=20).collect())),
+            x: Mutable::new(Arc::new((0..=limit()).collect())),
+            chart: Mutable::new(Arc::from(chart)),
             y1: Mutable::new(Arc::new(random())),
             y2: Mutable::new(Arc::new(random())),
         })
@@ -121,6 +135,7 @@ impl Model {
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
+           .style("width", "100%")
            .after_inserted(move |_| {
                 chart.into_chart().mutate().render();
             })
@@ -227,6 +242,7 @@ impl Model {
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
+           .style("width", "100%")
            .after_inserted(move |_| {
                 chart.into_chart().mutate().render();
             })
@@ -333,6 +349,7 @@ impl Model {
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
+           .style("width", "100%")
            .after_inserted(move |_| {
                 spawn_local(async {
                     gloo::console::log!("Starting render...");
@@ -373,6 +390,7 @@ impl Model {
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
+           .style("width", "100%")
            .after_inserted(move |_| {
                 chart.into_chart().render() // use.to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
             })
@@ -425,6 +443,7 @@ impl Model {
                         html!("canvas", {
                        .prop("id", three_a_id)
                        .style("height", "calc(100vh - 270px)")
+                       .style("width", "100%")
                        .after_inserted(move |_| {
                             three_a_chart.into_chart().render()
                         })
@@ -436,6 +455,7 @@ impl Model {
                         html!("canvas", {
                        .prop("id", three_b_id)
                        .style("height", "calc(100vh - 270px)")
+                       .style("width", "100%")
                        .after_inserted(move |_| {
                             three_b_chart.into_chart().render()
                         })
