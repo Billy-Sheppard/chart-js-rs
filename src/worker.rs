@@ -179,15 +179,210 @@ impl ChartWorker {
     pub(crate) async fn render(
         &self,
         obj: JsValue,
-        id: &String,
+        chart_id: &String,
         mutate: bool,
         plugins: String,
         defaults: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let canvas_element = document().get_element_by_id(id).unwrap();
+        let canvas_element = document().get_element_by_id(chart_id).unwrap();
 
         let width = canvas_element.client_width();
         let height = canvas_element.client_height();
+        let rect = canvas_element.get_bounding_client_rect();
+        let computed_styles = web_sys::window()
+            .unwrap()
+            .get_computed_style(&canvas_element)
+            .unwrap()
+            .unwrap();
+
+        let mousemove_handler = {
+            let worker = self.clone();
+            let chart_id = chart_id.clone();
+            Closure::wrap(Box::new({
+                let computed_styles = computed_styles.clone();
+                let rect = rect.clone();
+                move |event: web_sys::MouseEvent| {
+                    let x = (event.client_x() as f64 - rect.left()) * (width as f64 / rect.width());
+                    let y =
+                        (event.client_y() as f64 - rect.top()) * (height as f64 / rect.height());
+
+                    let message = js_sys::Object::new();
+                    js_sys::Reflect::set(&message, &"type".into(), &"mouse-event".into()).unwrap();
+                    js_sys::Reflect::set(&message, &"eventType".into(), &"mousemove".into())
+                        .unwrap();
+                    js_sys::Reflect::set(&message, &"x".into(), &x.into()).unwrap();
+                    js_sys::Reflect::set(&message, &"y".into(), &y.into()).unwrap();
+                    js_sys::Reflect::set(&message, &"chartId".into(), &chart_id.clone().into())
+                        .unwrap();
+
+                    // Add computed styles
+                    let styles_obj = js_sys::Object::new();
+                    js_sys::Reflect::set(
+                        &styles_obj,
+                        &"fontFamily".into(),
+                        &computed_styles
+                            .get_property_value("font-family")
+                            .unwrap()
+                            .into(),
+                    )
+                    .unwrap();
+                    js_sys::Reflect::set(
+                        &styles_obj,
+                        &"fontSize".into(),
+                        &computed_styles
+                            .get_property_value("font-size")
+                            .unwrap()
+                            .into(),
+                    )
+                    .unwrap();
+                    js_sys::Reflect::set(
+                        &styles_obj,
+                        &"fontWeight".into(),
+                        &computed_styles
+                            .get_property_value("font-weight")
+                            .unwrap()
+                            .into(),
+                    )
+                    .unwrap();
+                    js_sys::Reflect::set(
+                        &styles_obj,
+                        &"fontStyle".into(),
+                        &computed_styles
+                            .get_property_value("font-style")
+                            .unwrap()
+                            .into(),
+                    )
+                    .unwrap();
+                    js_sys::Reflect::set(
+                        &styles_obj,
+                        &"lineHeight".into(),
+                        &computed_styles
+                            .get_property_value("line-height")
+                            .unwrap()
+                            .into(),
+                    )
+                    .unwrap();
+                    js_sys::Reflect::set(
+                        &styles_obj,
+                        &"color".into(),
+                        &computed_styles.get_property_value("color").unwrap().into(),
+                    )
+                    .unwrap();
+                    js_sys::Reflect::set(&message, &"computedStyles".into(), &styles_obj).unwrap();
+
+                    worker.worker.post_message(&message).unwrap();
+                }
+            }) as Box<dyn FnMut(_)>)
+        };
+
+        let mouseleave_handler = {
+            let worker = self.clone();
+            let chart_id = chart_id.clone();
+            Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+                let message = js_sys::Object::new();
+                js_sys::Reflect::set(&message, &"type".into(), &"mouse-event".into()).unwrap();
+                js_sys::Reflect::set(&message, &"eventType".into(), &"mouseleave".into()).unwrap();
+                js_sys::Reflect::set(&message, &"chartId".into(), &chart_id.clone().into())
+                    .unwrap();
+
+                worker.worker.post_message(&message).unwrap();
+            }) as Box<dyn FnMut(_)>)
+        };
+        let click_handler = {
+            let worker = self.clone();
+            let chart_id = chart_id.clone();
+            let computed_styles = computed_styles.clone();
+            let rect = rect.clone();
+            Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+                let x = (event.client_x() as f64 - rect.left()) * (width as f64 / rect.width());
+                let y = (event.client_y() as f64 - rect.top()) * (height as f64 / rect.height());
+
+                let message = js_sys::Object::new();
+                js_sys::Reflect::set(&message, &"type".into(), &"mouse-event".into()).unwrap();
+                js_sys::Reflect::set(&message, &"eventType".into(), &"click".into()).unwrap();
+                js_sys::Reflect::set(&message, &"x".into(), &x.into()).unwrap();
+                js_sys::Reflect::set(&message, &"y".into(), &y.into()).unwrap();
+                js_sys::Reflect::set(&message, &"chartId".into(), &chart_id.clone().into())
+                    .unwrap();
+
+                // Add computed styles (same as mousemove)
+                let styles_obj = js_sys::Object::new();
+                js_sys::Reflect::set(
+                    &styles_obj,
+                    &"fontFamily".into(),
+                    &computed_styles
+                        .get_property_value("font-family")
+                        .unwrap()
+                        .into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(
+                    &styles_obj,
+                    &"fontSize".into(),
+                    &computed_styles
+                        .get_property_value("font-size")
+                        .unwrap()
+                        .into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(
+                    &styles_obj,
+                    &"fontWeight".into(),
+                    &computed_styles
+                        .get_property_value("font-weight")
+                        .unwrap()
+                        .into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(
+                    &styles_obj,
+                    &"fontStyle".into(),
+                    &computed_styles
+                        .get_property_value("font-style")
+                        .unwrap()
+                        .into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(
+                    &styles_obj,
+                    &"lineHeight".into(),
+                    &computed_styles
+                        .get_property_value("line-height")
+                        .unwrap()
+                        .into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(
+                    &styles_obj,
+                    &"color".into(),
+                    &computed_styles.get_property_value("color").unwrap().into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(&message, &"computedStyles".into(), &styles_obj).unwrap();
+
+                worker.worker.post_message(&message).unwrap();
+            }) as Box<dyn FnMut(_)>)
+        };
+
+        canvas_element
+            .add_event_listener_with_callback(
+                "mousemove",
+                mousemove_handler.as_ref().unchecked_ref(),
+            )
+            .unwrap();
+        canvas_element
+            .add_event_listener_with_callback(
+                "mouseleave",
+                mouseleave_handler.as_ref().unchecked_ref(),
+            )
+            .unwrap();
+        canvas_element
+            .add_event_listener_with_callback("click", click_handler.as_ref().unchecked_ref())
+            .unwrap();
+
+        mousemove_handler.forget();
+        mouseleave_handler.forget();
+        click_handler.forget();
 
         let offscreen_canvas = canvas_element
             .dyn_into::<web_sys::HtmlCanvasElement>()
@@ -201,7 +396,7 @@ impl ChartWorker {
                 width: width.into(),
                 height: height.into(),
                 obj,
-                id: id.to_string(),
+                id: chart_id.to_string(),
                 mutate,
                 plugins,
                 defaults,
