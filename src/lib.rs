@@ -10,11 +10,15 @@ pub mod objects;
 pub mod pie;
 pub mod scatter;
 pub mod traits;
+
+#[cfg(feature = "workers")]
 pub mod worker;
 
 pub use objects::*;
 pub use traits::*;
 pub use utils::*;
+
+#[cfg(feature = "workers")]
 pub use worker_chart::*;
 
 #[doc(hidden)]
@@ -23,7 +27,11 @@ mod utils;
 use exports::get_chart;
 use gloo_utils::format::JsValueSerdeExt;
 use serde::{de::DeserializeOwned, Serialize};
+
+#[cfg(feature = "workers")]
 use wasm_bindgen::{self, prelude::*};
+
+#[cfg(feature = "workers")]
 use web_sys::WorkerGlobalScope;
 
 pub trait ChartExt: DeserializeOwned + Serialize + Default {
@@ -70,6 +78,7 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
     }
 }
 
+#[cfg(feature = "workers")]
 pub fn is_worker() -> bool {
     js_sys::global().dyn_into::<WorkerGlobalScope>().is_ok()
 }
