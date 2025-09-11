@@ -1,3 +1,14 @@
+const chartAreaBackground = {
+    id: 'canvas_background_color',
+    beforeDraw: (chart, args, options) => {
+        const { ctx, width, height } = chart;
+        ctx.save();
+        ctx.fillStyle = options.color || 'white'; // default to white
+        ctx.fillRect(0, 0, width, height); // fill entire canvas
+        ctx.restore();
+    }
+};
+
 console.log('Chart worker ready');
 
 self.window = {
@@ -181,9 +192,11 @@ self.window = {
                     obj.plugins = eval(plugins);
                 }
 
+                console.debug('Before mutate:', obj);
                 if (mutate) {
                     obj = window.mutate_chart_object(obj)
                 }
+                console.debug('After mutate:', obj);
             }
 
             if (obj) obj = derationalize(obj);
