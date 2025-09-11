@@ -13,6 +13,8 @@ pub struct Doughnut {
     options: ChartOptions,
     id: String,
 }
+#[cfg(feature = "workers")]
+impl crate::WorkerChartExt for Doughnut {}
 impl ChartExt for Doughnut {
     type DS = Dataset<Vec<SinglePointDataset>>;
 

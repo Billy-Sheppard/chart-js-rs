@@ -8,7 +8,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-chart-js-rs = { path = "../" }
+chart-js-rs = { path = "../", features = ["workers"]}
 console_error_panic_hook = { version = "*", default-features = false }
 dominator = { version = "*", default-features = false }
 futures-signals = { version = "*", default-features = false }

@@ -1,6 +1,6 @@
 [package]
 name = "chart-js-rs"
-version = "0.0.58"
+version = "0.1.0"
 edition = "2021"
 authors = ["Billy Sheppard", "Luis Moreno"]
 license = "Apache-2.0"
@@ -19,8 +19,17 @@ rust_decimal = "1.37.2"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.141"
 serde-wasm-bindgen = "0.6"
-wasm-bindgen = { version = "0.2.100", features = ["serde-serialize"] }
+wasm-bindgen = { version = "0.2.101", features = ["serde-serialize"] }
 uuid = { version = "1.17.0", features = ["v4", "js"] }
+web-sys = { version = "0.3.77", optional = true, features = [
+    "DomRect",
+    "HtmlCanvasElement",
+    "OffscreenCanvas",
+    "WorkerOptions",
+    "WorkerType",
+] }
+tokio = { version = "1.47.1", features = ["sync"], optional = true }
+itertools = "0.14.0"
 
 [workspace]
 members = ["examples"]
@@ -31,3 +40,7 @@ itertools = "0.14.0"
 quote = "1.0.40"
 proc-macro2 = "1.0.95"
 syn = { features = ["parsing", "full"], version = "2.0.106" }
+
+[features]
+default = []
+workers = ["dep:web-sys", "dep:tokio"]

@@ -117,13 +117,17 @@ impl Chart {
         self.to_owned()
     }
 
+    /// This should not be used on a chart with a worker attached.
+    /// If it is, it will do nothing.
     pub fn render(self) {
         self.rationalise_js();
+
         render_chart(self.obj, &self.id, self.mutate, self.plugins, self.defaults);
     }
 
+    /// This should not be used on a chart with a worker attached.
+    /// If it is, it will always return `false`
     pub fn update(self, animate: bool) -> bool {
-        self.rationalise_js();
         update_chart(self.obj, &self.id, animate)
     }
 

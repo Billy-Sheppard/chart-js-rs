@@ -349,11 +349,19 @@ pub struct ChartPlugins {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) autocolors: Option<AutoColors>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) canvasBackgroundColor: Option<CanvasBackgroundColor>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) legend: Option<PluginLegend>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) title: Option<Title>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) tooltip: Option<TooltipPlugin>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CanvasBackgroundColor {
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub(crate) color: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]

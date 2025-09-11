@@ -1,13 +1,3 @@
-const chartAreaBackground = {
-    id: 'canvas_background_color',
-    beforeDraw: (chart, args, options) => {
-        const { ctx, width, height } = chart;
-        ctx.save();
-        ctx.fillStyle = options.color || 'white'; // default to white
-        ctx.fillRect(0, 0, width, height); // fill entire canvas
-        ctx.restore();
-    }
-};
 export function get_chart(id) {
     return Chart.getChart(document.getElementById(id)).config._config
 }
@@ -16,7 +6,7 @@ export function render_chart(v, id, mutate, plugins, defaults) {
     console.debug('Before mutate:', v);
 
     let obj;
-
+    
     if (defaults != null || defaults != undefined) {
         defaults = eval(defaults);
     }
@@ -58,4 +48,4 @@ export function update_chart(updated, id, animate) {
     catch {
         false
     }
-} 
+}

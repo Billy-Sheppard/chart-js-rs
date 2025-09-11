@@ -6,11 +6,27 @@ use rand::{Rng, SeedableRng};
 use std::{collections::BTreeMap, sync::Arc};
 use utils::*;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
+use wasm_bindgen_futures::spawn_local;
 
 mod utils;
 
+const WORKER_IMPORTS: &str = include_str!("../worker_imports.js");
+
+fn limit() -> usize {
+    if gloo::utils::window()
+        .location()
+        .search()
+        .unwrap_or_default()
+        .contains("async")
+    {
+        100
+    } else {
+        20
+    }
+}
+
 fn random() -> Vec<usize> {
-    let rnd = (0..=20).map(|_| {
+    let rnd = (0..=limit()).map(|_| {
         let mut buf: [u8; 32] = Default::default();
         getrandom::getrandom(&mut buf).unwrap();
         let mut rng = rand::prelude::StdRng::from_seed(buf);
@@ -30,7 +46,7 @@ pub struct Model {
     y2: Mutable<Arc<Vec<usize>>>,
 }
 impl Model {
-    async fn init() -> Arc<Self> {
+    fn init() -> Arc<Self> {
         let query_string = gloo::utils::window()
             .location()
             .search()
@@ -41,10 +57,11 @@ impl Model {
             .tuples::<(&str, &str)>()
             .collect::<BTreeMap<&str, &str>>();
 
+        let chart = query.get("chart").cloned().unwrap_or("scatter");
         Arc::new(Model {
             tick: Mutable::default(),
-            chart: Mutable::new(query.get("chart").cloned().unwrap_or("scatter").into()),
-            x: Mutable::new(Arc::new((0..=20).collect())),
+            x: Mutable::new(Arc::new((0..=limit()).collect())),
+            chart: Mutable::new(Arc::from(chart)),
             y1: Mutable::new(Arc::new(random())),
             y2: Mutable::new(Arc::new(random())),
         })
@@ -83,6 +100,11 @@ impl Model {
                 self.clone()
                     .show_line(x.as_slice(), y1.as_slice(), y2.as_slice()),
             ),
+            "line-async" => Some(self.clone().show_line_async(
+                x.iter().as_slice(),
+                y1.as_slice(),
+                y2.as_slice(),
+            )),
             _ => None,
         })
     }
@@ -113,6 +135,7 @@ impl Model {
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
+           .style("width", "100%")
            .after_inserted(move |_| {
                 chart.into_chart().mutate().render();
             })
@@ -219,8 +242,120 @@ impl Model {
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
+           .style("width", "100%")
            .after_inserted(move |_| {
                 chart.into_chart().mutate().render();
+            })
+        })
+    }
+
+    fn show_line_async(self: Arc<Self>, x: &[usize], y1: &[usize], y2: &[usize]) -> Dom {
+        // construct and render chart here
+        let id = "line-async";
+
+        let chart = Scatter::new(id)
+            // we use <NoAnnotations> here to type hint for the compiler
+            .data(
+                Dataset::new().datasets([
+                    XYDataset::new()
+                        .data(
+                            x.iter()
+                                .zip(y1)
+                                .enumerate()
+                                .map(|(x, d)| {
+                                    if x % 5 == 0 {
+                                        ("NaN".to_string(), "NaN".to_string())
+                                    } else {
+                                        (d.0.to_string(), d.1.to_string())
+                                    }
+                                })
+                                .into_data_iter()
+                                .unsorted_to_dataset_data(), // collect into dataset
+                        )
+                        .span_gaps(true)
+                        .point_radius(4)
+                        .point_border_color("darkgreen")
+                        .point_background_color("palegreen")
+                        .label("Dataset 1")
+                        .dataset_type("line")
+                        .segment(
+                            Segment::new()
+                                .border_dash(
+                                    // one way is to write your logic in Javascript
+                                    FnWithArgs::new()
+                                        .args(["ctx"])
+                                        .js_body(
+                                            "if (ctx.p0.skip || ctx.p1.skip) {
+                                                var out = [2, 2]
+                                            } else {
+                                                var out = undefined
+                                            };",
+                                        )
+                                        .js_return_value("out"),
+                                )
+                                .border_color(
+                                    // alternatively you can pass a closure with the same amount of arguments as the FnWithArgs<N>
+                                    FnWithArgs::new().args(["ctx"]).rust_closure(|ctx| {
+                                        let ctx = uncircle_chartjs_value_to_serde_json_value(ctx)
+                                            .unwrap();
+
+                                        if ctx["p0"]["skip"].as_bool().unwrap()
+                                            || ctx["p1"]["skip"].as_bool().unwrap()
+                                        {
+                                            "lightgrey"
+                                        } else if ctx["p0"]["parsed"]["y"].as_i64()
+                                            > ctx["p1"]["parsed"]["y"].as_i64()
+                                        {
+                                            "firebrick"
+                                        } else {
+                                            "green"
+                                        }
+                                        .into()
+                                    }),
+                                ),
+                        ),
+                    XYDataset::new()
+                        .data(x.iter().zip(y2).into_data_iter().unsorted_to_dataset_data()) // collect into dataset
+                        .border_color("blue")
+                        .background_color("lightskyblue")
+                        .point_border_color("blue")
+                        .point_background_color("lightskyblue")
+                        .point_radius(4)
+                        .label("Dataset 2")
+                        .dataset_type("line"),
+                ]),
+            )
+            .options(
+                ChartOptions::new()
+                    .scales([(
+                        "x",
+                        ChartScale::new().scale_type("linear").ticks(
+                            ScaleTicks::new().callback(
+                                // we can call rust functions in callbacks
+                                FnWithArgs::<3>::new()
+                                    // we can override any arguments going in, in this case we must as rust cannot handle `this`.
+                                    // Note: if you don't define your variables with ``.args([..])`, they get the default label of the letter of the alphabet they're the index of
+                                    //       1st arg: `a`
+                                    //       2nd arg: `b`
+                                    //       ...
+                                    .js_body("var a = this.getLabelForValue(a);")
+                                    // function pointer goes here - note that the count of arguments must equal the const param (3 in this case)
+                                    .run_rust_fn(show_line_ticks),
+                            ),
+                        ),
+                    )])
+                    .maintain_aspect_ratio(false),
+            );
+        html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
+           .prop("id", id)
+           .style("height", "calc(100vh - 270px)")
+           .style("width", "100%")
+           .after_inserted(move |_| {
+                spawn_local(async {
+                    gloo::console::log!("Starting render...");
+                    chart.into_worker_chart(WORKER_IMPORTS).await.unwrap().mutate().render_async().await.unwrap();
+                    gloo::console::log!("Completed render!");
+                });
             })
         })
     }
@@ -255,6 +390,7 @@ impl Model {
         html!("canvas", { // construct a html canvas element, and after its rendered into the DOM we can insert our chart
            .prop("id", id)
            .style("height", "calc(100vh - 270px)")
+           .style("width", "100%")
            .after_inserted(move |_| {
                 chart.into_chart().render() // use.to_chart().render_mutate(id) if you wish to run some javascript on this chart, for more detail see bar and index.html
             })
@@ -307,6 +443,7 @@ impl Model {
                         html!("canvas", {
                        .prop("id", three_a_id)
                        .style("height", "calc(100vh - 270px)")
+                       .style("width", "100%")
                        .after_inserted(move |_| {
                             three_a_chart.into_chart().render()
                         })
@@ -318,6 +455,7 @@ impl Model {
                         html!("canvas", {
                        .prop("id", three_b_id)
                        .style("height", "calc(100vh - 270px)")
+                       .style("width", "100%")
                        .after_inserted(move |_| {
                             three_b_chart.into_chart().render()
                         })
@@ -371,6 +509,20 @@ impl Model {
                                 let model = self.clone();
                                 move |_: events::Click| {
                                     model.clone().chart.set("line".into()); // change which chart is in view
+                                    model.clone().set_query();
+                                }
+                            })
+                        })
+                    )
+                    .child(
+                        html!("button", {
+                           .class(["button", "is-success"])
+                           .class_signal("is-light", self.clone().chart_not_selected("line-async"))
+                           .text("Line (Async)")
+                           .event({
+                                let model = self.clone();
+                                move |_: events::Click| {
+                                    model.clone().chart.set("line-async".into()); // change which chart is in view
                                     model.clone().set_query();
                                 }
                             })
@@ -505,10 +657,15 @@ pub fn show_line_ticks(this: String, index: u32, _ticks: JsValue) -> String {
 }
 
 #[wasm_bindgen(start)]
-pub async fn main_js() -> Result<(), JsValue> {
+pub fn main_js() -> Result<(), JsValue> {
+    // this allows the wasm_bindgen to export the functions in the worker but not run any code
+    if is_worker() {
+        return Ok(());
+    }
+
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-    let app = Model::init().await;
+    let app = Model::init();
     dominator::append_dom(&dominator::body(), Model::render(app));
     Ok(())
 }
