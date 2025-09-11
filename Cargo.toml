@@ -42,5 +42,5 @@ proc-macro2 = "1.0.95"
 syn = { features = ["parsing", "full"], version = "2.0.106" }
 
 [features]
-default = ["workers"]
+default = []
 workers = ["dep:web-sys", "dep:tokio"]

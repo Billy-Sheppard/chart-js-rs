@@ -212,34 +212,31 @@ impl ChartWorker {
                         "x" => x,
                         "y" => y,
                         "chartId" => chart_id.clone(),
+                        "computedStyles" => obj! {
+                            "fontFamily" => computed_styles
+                                .get_property_value("font-family")
+                                .unwrap(),
+
+                            "fontSize" => computed_styles
+                                .get_property_value("font-size")
+                                .unwrap(),
+
+                            "fontWeight" => computed_styles
+                                .get_property_value("font-weight")
+                                .unwrap(),
+
+                            "fontStyle" => computed_styles
+                                .get_property_value("font-style")
+                                .unwrap(),
+
+                            "lineHeight" => computed_styles
+                                .get_property_value("line-height")
+                                .unwrap(),
+
+                            "color" => computed_styles.get_property_value("color").unwrap(),
+                        }
                     };
 
-                    // Add computed styles
-                    let styles_obj = obj!{
-                        "fontFamily" => computed_styles
-                            .get_property_value("font-family")
-                            .unwrap(),
-                    
-                        "fontSize" => computed_styles
-                            .get_property_value("font-size")
-                            .unwrap(),
-                    
-                        "fontWeight" => computed_styles
-                            .get_property_value("font-weight")
-                            .unwrap(),
-                    
-                        "fontStyle" => computed_styles
-                            .get_property_value("font-style")
-                            .unwrap(),
-                    
-                        "lineHeight" => computed_styles
-                            .get_property_value("line-height")
-                            .unwrap(),
-                    
-                        "color" => computed_styles.get_property_value("color").unwrap(),
-                        "computedStyles" => styles_obj,
-                    };
-                    
                     worker.worker.post_message(&message).unwrap();
                 }
             }) as Box<dyn FnMut(_)>)
@@ -267,45 +264,34 @@ impl ChartWorker {
                 let x = (event.client_x() as f64 - rect.left()) * (width as f64 / rect.width());
                 let y = (event.client_y() as f64 - rect.top()) * (height as f64 / rect.height());
 
-                let message = obj!{
-                    "type".into() => "mouse-event",
-                    "eventType".into() => "click",
-                    "x".into() => x,
-                    "y".into() => y,
-                    "chartId".into() => chart_id.clone(),
-                };
+                let message = obj! {
+                    "type" => "mouse-event",
+                    "eventType" => "click",
+                    "x" => x,
+                    "y" => y,
+                    "chartId" => chart_id.clone(),
+                    "computedStyles" => obj! {
+                        "fontFamily" => computed_styles
+                            .get_property_value("font-family")
+                            .unwrap(),
 
+                        "fontSize" => computed_styles
+                            .get_property_value("font-size")
+                            .unwrap(),
 
-                // Add computed styles (same as mousemove)
-                let styles_obj = obj!{
-                
-                    "fontFamily" => computed_styles
-                        .get_property_value("font-family")
-                        .unwrap()
-                        .into(),
-                
-                    "fontSize" => computed_styles
-                        .get_property_value("font-size")
-                        .unwrap()
-                        .into(),
-                
-                    "fontWeight" => computed_styles
-                        .get_property_value("font-weight")
-                        .unwrap()
-                        .into(),
-                
-                    "fontStyle" => computed_styles
-                        .get_property_value("font-style")
-                        .unwrap()
-                        .into(),
-                
-                    "lineHeight" => computed_styles
-                        .get_property_value("line-height")
-                        .unwrap()
-                        .into(),
-                
-                    "color" => &computed_styles.get_property_value("color").unwrap().int(),
-                    "computedStyles" => styles_obj,
+                        "fontWeight" => computed_styles
+                            .get_property_value("font-weight")
+                            .unwrap(),
+
+                        "fontStyle" => computed_styles
+                            .get_property_value("font-style")
+                            .unwrap(),
+
+                        "lineHeight" => computed_styles
+                            .get_property_value("line-height")
+                            .unwrap(),
+
+                    },
                 };
 
                 worker.worker.post_message(&message).unwrap();
