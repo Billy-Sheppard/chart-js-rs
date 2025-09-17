@@ -863,13 +863,13 @@ impl<'de, T: Serialize + DeserializeOwned> Deserialize<'de> for NumberStringOrT<
     where
         D: de::Deserializer<'de>,
     {
-        // thanks serde :|
-        let value = serde::__private::de::Content::deserialize(deserializer)?;
-        let deserializer = serde::__private::de::ContentRefDeserializer::<D::Error>::new(&value);
+        let value = serde_json::Value::deserialize(deserializer)?;
 
-        match NumberString::deserialize(deserializer) {
+        match serde_json::from_value::<NumberString>(value.clone()) {
             Ok(ns) => Ok(Self::NumberString(ns)),
-            Err(_) => T::deserialize(deserializer).map(Self::T),
+            Err(_) => serde_json::from_value::<T>(value)
+                .map(Self::T)
+                .map_err(de::Error::custom),
         }
     }
 }
