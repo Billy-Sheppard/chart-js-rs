@@ -649,7 +649,7 @@ impl Model {
 
 #[wasm_bindgen]
 pub fn show_line_ticks(this: String, index: u32, _ticks: JsValue) -> String {
-    if index % 2 == 0 {
+    if index.is_multiple_of(2) {
         this
     } else {
         String::new()
