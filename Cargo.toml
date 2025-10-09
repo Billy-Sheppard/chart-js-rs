@@ -1,6 +1,6 @@
 [package]
 name = "chart-js-rs"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["Billy Sheppard", "Luis Moreno"]
 license = "Apache-2.0"
@@ -43,4 +43,11 @@ syn = { features = ["parsing", "full"], version = "2.0.106" }
 
 [features]
 default = []
-workers = ["dep:web-sys", "dep:tokio"]
+workers = [
+    "dep:web-sys",
+    "dep:tokio",
+    "web-sys/CssStyleDeclaration",
+    "web-sys/Element",
+    "web-sys/MouseEvent",
+    "web-sys/Window",
+]
