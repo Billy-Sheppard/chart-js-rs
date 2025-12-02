@@ -89,7 +89,7 @@ pub struct SinglePointDataset {
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct XYDataset {
     #[serde(skip_serializing_if = "FnWithArgsOrT::is_empty", default)]
-    pub(crate) backgroundColor: FnWithArgsOrT<2, String>,
+    pub(crate) backgroundColor: FnWithArgsOrT<1, String>,
     #[serde(
         skip_serializing_if = "Vec::is_empty",
         default,
@@ -752,6 +752,8 @@ pub struct LegendLabel {
     pub(crate) filter: FnWithArgs<2>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) font: Option<Font>,
+    #[serde(skip_serializing_if = "FnWithArgs::is_empty", default)]
+    pub(crate) generateLabels: FnWithArgs<1>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) pointStyle: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
