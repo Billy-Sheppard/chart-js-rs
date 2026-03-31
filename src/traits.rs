@@ -43,6 +43,25 @@ pub trait DatasetIterExt: Iterator {
     {
         self.map(|(x, y)| (x.into(), y.into(), None))
     }
+    fn into_data_iter_with_nulls<X, Y>(
+        self,
+    ) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<Value>)>
+    where
+        Self: Iterator<Item = (X, Option<Y>)> + Sized,
+        X: Into<NumberOrDateString>,
+        Y: Into<NumberString>,
+    {
+        self.map(|(x, y)| {
+            (
+                x.into(),
+                match y {
+                    Some(y) => y.into(),
+                    None => "null".into(),
+                },
+                None,
+            )
+        })
+    }
     fn into_data_iter_with_description<X, Y, D>(
         self,
     ) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<Value>)>
@@ -53,6 +72,26 @@ pub trait DatasetIterExt: Iterator {
         D: Serialize,
     {
         self.map(|(x, y, d)| (x.into(), y.into(), Some(serde_json::to_value(d).unwrap())))
+    }
+    fn into_data_iter_with_nulls_and_description<X, Y, D>(
+        self,
+    ) -> impl Iterator<Item = (NumberOrDateString, NumberString, Option<Value>)>
+    where
+        Self: Iterator<Item = (X, Option<Y>, D)> + Sized,
+        X: Into<NumberOrDateString>,
+        Y: Into<NumberString>,
+        D: Serialize,
+    {
+        self.map(|(x, y, d)| {
+            (
+                x.into(),
+                match y {
+                    Some(y) => y.into(),
+                    None => "null".into(),
+                },
+                Some(serde_json::to_value(d).unwrap()),
+            )
+        })
     }
 }
 impl<T> DatasetIterExt for T where T: Iterator + ?Sized {}

@@ -113,9 +113,11 @@ fn option_vec_is_none<T: Default + PartialEq + Clone>(opt: &Option<Vec<T>>) -> b
         None => true,
     }
 }
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Any {
+    Null(Option<()>),
     String(String),
     Int(isize),
     Bool(bool),
@@ -138,6 +140,7 @@ impl Any {
             Any::Int(_i) => false,
             Any::Bool(_b) => false,
             Any::Vec(v) => v.is_empty(),
+            Any::Null(_) => true,
         }
     }
 }
@@ -148,6 +151,7 @@ impl Display for Any {
             Any::Bool(b) => write!(f, "{b}"),
             Any::Int(i) => write!(f, "{i}"),
             Any::Vec(_) => write!(f, ""),
+            Any::Null(_) => write!(f, "null"),
         }
     }
 }
@@ -200,6 +204,9 @@ impl Serialize for NumberOrDateString {
     {
         let fnum: Result<f64, _> = self.0.parse();
         let inum: Result<i64, _> = self.0.parse();
+        if self.0.eq_ignore_ascii_case("null") {
+            return serializer.serialize_none();
+        }
         match (fnum, inum) {
             (Ok(_), Ok(inum)) => serializer.serialize_i64(inum),
             (Ok(fnum), _) => serializer.serialize_f64(fnum),
@@ -836,6 +843,9 @@ impl Serialize for NumberString {
     {
         let fnum: Result<f64, _> = self.0.parse();
         let inum: Result<i64, _> = self.0.parse();
+        if self.0.eq_ignore_ascii_case("null") {
+            return serializer.serialize_none();
+        }
         match (fnum, inum) {
             (Ok(_), Ok(inum)) => serializer.serialize_i64(inum),
             (Ok(fnum), _) => serializer.serialize_f64(fnum),

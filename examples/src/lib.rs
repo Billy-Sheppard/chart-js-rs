@@ -2,7 +2,7 @@ use chart_js_rs::{bar::Bar, doughnut::Doughnut, pie::Pie, scatter::Scatter, *};
 use dominator::{events, html, Dom};
 use futures_signals::signal::{Mutable, Signal, SignalExt};
 use itertools::Itertools;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use std::{collections::BTreeMap, sync::Arc};
 use utils::*;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};

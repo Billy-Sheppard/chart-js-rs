@@ -1,6 +1,6 @@
 [package]
 name = "chart-js-rs"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["Billy Sheppard", "Luis Moreno"]
 license = "Apache-2.0"
@@ -12,8 +12,8 @@ repository = "https://github.com/Billy-Sheppard/chart-js-rs"
 homepage = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 [dependencies]
-gloo-console = { version = "0.3" }
-gloo-utils = { version = "0.2", features = ["serde"] }
+gloo-console = { version = "0.4" }
+gloo-utils = { version = "0.3", features = ["serde"] }
 js-sys = "0.3.77"
 rust_decimal = "1.37.2"
 serde = { version = "1.0.219", features = ["derive"] }
@@ -39,7 +39,7 @@ heck = "0.5.0"
 itertools = "0.14.0"
 quote = "1.0.40"
 proc-macro2 = "1.0.95"
-syn = { features = ["parsing", "full"], version = "2.0.111" }
+syn = { features = ["parsing", "full"], version = "2.0.117" }
 
 [features]
 default = []
