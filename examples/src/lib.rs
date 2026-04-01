@@ -351,7 +351,7 @@ impl Model {
            .style("height", "calc(100vh - 270px)")
            .style("width", "100%")
            .after_inserted(move |_| {
-                spawn_local(async {
+                spawn_local(async move {
                     gloo::console::log!("Starting render...");
                     chart.into_worker_chart(WORKER_IMPORTS).await.unwrap().mutate().render_async().await.unwrap();
                     gloo::console::log!("Completed render!");

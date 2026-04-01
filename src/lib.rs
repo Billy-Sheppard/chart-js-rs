@@ -26,7 +26,7 @@ mod utils;
 
 use exports::get_chart;
 use gloo_utils::format::JsValueSerdeExt;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::Deserialize;
 
 #[cfg(feature = "workers")]
 use wasm_bindgen::{self, prelude::*};
@@ -34,32 +34,51 @@ use wasm_bindgen::{self, prelude::*};
 #[cfg(feature = "workers")]
 use web_sys::WorkerGlobalScope;
 
-pub trait ChartExt: DeserializeOwned + Serialize + Default {
+pub trait ChartExt: erased_serde::Serialize {
     type DS;
 
-    fn new(id: impl AsRef<str>) -> Self {
+    fn new(id: impl AsRef<str>) -> Self
+    where
+        Self: Default,
+    {
         Self::default().id(id.as_ref().into())
     }
 
     fn get_id(&self) -> &str;
-    fn id(self, id: String) -> Self;
+    fn id(self, id: String) -> Self
+    where
+        Self: Sized;
 
     fn get_data(&mut self) -> &mut Self::DS;
-    fn data(mut self, data: impl Into<Self::DS>) -> Self {
+    fn data(mut self, data: impl Into<Self::DS>) -> Self
+    where
+        Self: Sized,
+    {
         *self.get_data() = data.into();
         self
     }
 
     fn get_options(&mut self) -> &mut ChartOptions;
-    fn options(mut self, options: impl Into<ChartOptions>) -> Self {
+    fn options(mut self, options: impl Into<ChartOptions>) -> Self
+    where
+        Self: Sized,
+    {
         *self.get_options() = options.into();
         self
     }
 
-    fn into_chart(self) -> Chart {
+    #[allow(clippy::wrong_self_convention)]
+    fn into_json(&self) -> wasm_bindgen::JsValue {
+        let json_value = erased_serde::serialize(self, serde_json::value::Serializer)
+            .expect("Unable to serialize chart!");
+        <wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&json_value)
+            .expect("Unable to convert to JsValue!")
+    }
+
+    #[allow(clippy::wrong_self_convention)]
+    fn into_chart(&self) -> Chart {
         Chart {
-            obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
-                .expect("Unable to serialize chart."),
+            obj: self.into_json(),
             id: self.get_id().into(),
             mutate: false,
             plugins: String::new(),
@@ -67,7 +86,10 @@ pub trait ChartExt: DeserializeOwned + Serialize + Default {
         }
     }
 
-    fn get_chart_from_id(id: &str) -> Option<Self> {
+    fn get_chart_from_id(id: &str) -> Option<Self>
+    where
+        for<'de> Self: Deserialize<'de>,
+    {
         let chart = get_chart(id);
 
         serde_wasm_bindgen::from_value(chart)
@@ -89,13 +111,13 @@ mod worker_chart {
 
     pub trait WorkerChartExt: ChartExt {
         #[allow(async_fn_in_trait)]
+        #[allow(clippy::wrong_self_convention)]
         async fn into_worker_chart(
-            self,
+            &self,
             imports_block: &str,
         ) -> Result<WorkerChart, Box<dyn std::error::Error>> {
             Ok(WorkerChart {
-                obj: <::wasm_bindgen::JsValue as JsValueSerdeExt>::from_serde(&self)
-                    .expect("Unable to serialize chart."),
+                obj: self.into_json(),
                 id: self.get_id().into(),
                 mutate: false,
                 plugins: String::new(),
