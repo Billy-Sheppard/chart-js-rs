@@ -1,6 +1,6 @@
 [package]
 name = "chart-js-rs"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 authors = ["Billy Sheppard", "Luis Moreno"]
 license = "Apache-2.0"
@@ -12,24 +12,24 @@ repository = "https://github.com/Billy-Sheppard/chart-js-rs"
 homepage = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 [dependencies]
-gloo-console = { version = "0.4" }
-gloo-utils = { version = "0.3", features = ["serde"] }
-js-sys = "0.3.77"
-rust_decimal = "1.37.2"
-serde = { version = "1.0.219", features = ["derive"] }
+gloo-console = { version = "0.4.0" }
+gloo-utils = { version = "0.3.0", features = ["serde"] }
+js-sys = "0.3.99"
+rust_decimal = "1.42.0"
+serde = { version = "1.0.228", features = ["derive"] }
 erased-serde = { version = "0.4.10" }
-serde_json = "1.0.141"
-serde-wasm-bindgen = "0.6"
-wasm-bindgen = { version = "0.2.117", features = ["serde-serialize"] }
-uuid = { version = "1.17.0", features = ["v4", "js"] }
-web-sys = { version = "0.3.77", optional = true, features = [
+serde_json = "1.0.150"
+serde-wasm-bindgen = "0.6.5"
+wasm-bindgen = { version = "0.2.122", features = ["serde-serialize"] }
+uuid = { version = "1.23.2", features = ["v4", "js"] }
+web-sys = { version = "0.3.99", optional = true, features = [
     "DomRect",
     "HtmlCanvasElement",
     "OffscreenCanvas",
     "WorkerOptions",
     "WorkerType",
 ] }
-tokio = { version = "1.47.1", features = ["sync"], optional = true }
+tokio = { version = "1.52.3", features = ["sync"], optional = true }
 itertools = "0.14.0"
 
 [workspace]
@@ -38,8 +38,8 @@ members = ["examples"]
 [build-dependencies]
 heck = "0.5.0"
 itertools = "0.14.0"
-quote = "1.0.40"
-proc-macro2 = "1.0.95"
+quote = "1.0.45"
+proc-macro2 = "1.0.106"
 syn = { features = ["parsing", "full"], version = "2.0.117" }
 
 [features]

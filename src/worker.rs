@@ -359,13 +359,13 @@ impl ChartWorker {
         .map(|v| v.as_bool().unwrap_or_default())
     }
 
-    pub(crate) async fn new(imports_block: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub(crate) async fn new(imports_block: String) -> Result<Self, Box<dyn std::error::Error>> {
         // Spawn Worker
         let worker_options = WorkerOptions::new();
         worker_options.set_type(WorkerType::Module);
 
         let from_worker = broadcast::channel::<(String, MessageContent)>(1).0;
-        let worker = Worker::new_with_options(&shim_blob(imports_block), &worker_options)
+        let worker = Worker::new_with_options(&shim_blob(&imports_block), &worker_options)
             .map_err(|e| format!("{e:?}"))?;
 
         let handler = {

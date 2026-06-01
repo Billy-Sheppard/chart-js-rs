@@ -107,25 +107,30 @@ pub fn is_worker() -> bool {
 
 #[cfg(feature = "workers")]
 mod worker_chart {
+    use std::{future::Future, pin::Pin};
+
     use crate::*;
 
     pub trait WorkerChartExt: ChartExt {
-        #[allow(async_fn_in_trait)]
         #[allow(clippy::wrong_self_convention)]
-        async fn into_worker_chart(
+        fn into_worker_chart(
             &self,
-            imports_block: &str,
-        ) -> Result<WorkerChart, Box<dyn std::error::Error>> {
-            Ok(WorkerChart {
-                obj: self.into_json(),
-                id: self.get_id().into(),
-                mutate: false,
-                plugins: String::new(),
-                defaults: String::new(),
-                worker: crate::worker::ChartWorker::new(imports_block).await?,
+            imports_block: String,
+        ) -> Pin<Box<dyn Future<Output = Result<WorkerChart, Box<dyn std::error::Error>>> + '_>>
+        {
+            Box::pin(async move {
+                Ok(WorkerChart {
+                    obj: self.into_json(),
+                    id: self.get_id().into(),
+                    mutate: false,
+                    plugins: String::new(),
+                    defaults: String::new(),
+                    worker: crate::worker::ChartWorker::new(imports_block).await?,
+                })
             })
         }
     }
+
     #[wasm_bindgen]
     #[derive(Clone)]
     #[must_use = "\nAppend .render_async()\n"]
