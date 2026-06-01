@@ -112,7 +112,7 @@ mod worker_chart {
     use crate::*;
 
     pub trait WorkerChartExt: ChartExt {
-        #[allow(clippy::wrong_self_convention)]
+        #[allow(clippy::wrong_self_convention, clippy::type_complexity)]
         fn into_worker_chart(
             &self,
             imports_block: String,

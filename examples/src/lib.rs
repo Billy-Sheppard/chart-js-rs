@@ -353,7 +353,7 @@ impl Model {
            .after_inserted(move |_| {
                 spawn_local(async move {
                     gloo::console::log!("Starting render...");
-                    chart.into_worker_chart(WORKER_IMPORTS).await.unwrap().mutate().render_async().await.unwrap();
+                    chart.into_worker_chart(WORKER_IMPORTS.into()).await.unwrap().mutate().render_async().await.unwrap();
                     gloo::console::log!("Completed render!");
                 });
             })
