@@ -29,7 +29,8 @@ web-sys = { version = "0.3.99", optional = true, features = [
     "WorkerOptions",
     "WorkerType",
 ] }
-tokio = { version = "1.52.3", features = ["sync"], optional = true }
+worxide = { git = "https://github.com/Billy-Sheppard/worxide.git", branch = "persistent-workers", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
 itertools = "0.14.0"
 
 [workspace]
@@ -45,10 +46,15 @@ syn = { features = ["parsing", "full"], version = "2.0.117" }
 [features]
 default = []
 workers = [
-    "dep:web-sys",
-    "dep:tokio",
+    "dep:worxide",
+    "dep:wasm-bindgen-futures",
     "web-sys/CssStyleDeclaration",
+    "web-sys/DedicatedWorkerGlobalScope",
+    "web-sys/Document",
+    "web-sys/DomRect",
     "web-sys/Element",
+    "web-sys/HtmlCanvasElement",
     "web-sys/MouseEvent",
+    "web-sys/OffscreenCanvas",
     "web-sys/Window",
 ]

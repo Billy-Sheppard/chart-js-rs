@@ -12,7 +12,9 @@ impl<T: Display> ChartJsRsObject for T {
     }
 }
 
-pub trait DatasetTrait: for<'a> Deserialize<'a> + Serialize + Default + Clone {
+pub trait DatasetTrait:
+    for<'a> Deserialize<'a> + Serialize + Default + Clone + Send + 'static
+{
     fn labels(self) -> Vec<NumberOrDateString>;
 }
 pub trait DatasetDataExt {

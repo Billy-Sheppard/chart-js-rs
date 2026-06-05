@@ -10,8 +10,6 @@ use wasm_bindgen_futures::spawn_local;
 
 mod utils;
 
-const WORKER_IMPORTS: &str = include_str!("../worker_imports.js");
-
 fn limit() -> usize {
     if gloo::utils::window()
         .location()
@@ -353,7 +351,15 @@ impl Model {
            .after_inserted(move |_| {
                 spawn_local(async move {
                     gloo::console::log!("Starting render...");
-                    chart.into_worker_chart(WORKER_IMPORTS.into()).await.unwrap().mutate().render_async().await.unwrap();
+                    // The chart crosses to the worker as a Rust value (by pointer);
+                    // serialization + Chart.js construction happen on the worker.
+                    chart
+                        .into_worker_chart()
+                        .await
+                        .unwrap()
+                        .render_async()
+                        .await
+                        .unwrap();
                     gloo::console::log!("Completed render!");
                 });
             })
@@ -659,7 +665,7 @@ pub fn show_line_ticks(this: String, index: u32, _ticks: JsValue) -> String {
 #[wasm_bindgen(start)]
 pub fn main_js() -> Result<(), JsValue> {
     // this allows the wasm_bindgen to export the functions in the worker but not run any code
-    if is_worker() {
+    if chart_js_rs::is_worker() {
         return Ok(());
     }
 

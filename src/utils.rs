@@ -80,13 +80,7 @@ fn get_path(j: &JsValue, item: &str) -> Option<JsValue> {
 /// See get_path()
 fn object_values_at(j: &JsValue, item: &str) -> Option<JsValue> {
     let o = get_path(j, item);
-    o.and_then(|o| {
-        if o == JsValue::UNDEFINED {
-            None
-        } else {
-            Some(o)
-        }
-    })
+    o.filter(|o| o != &JsValue::UNDEFINED)
 }
 
 impl Chart {

@@ -19,6 +19,10 @@ pub use traits::*;
 pub use utils::*;
 
 #[cfg(feature = "workers")]
+pub use worxide::is_worker;
+#[cfg(feature = "workers")]
+pub use worker::{ChartWorker, WorkerLibs};
+#[cfg(feature = "workers")]
 pub use worker_chart::*;
 
 #[doc(hidden)]
@@ -27,12 +31,6 @@ mod utils;
 use exports::get_chart;
 use gloo_utils::format::JsValueSerdeExt;
 use serde::Deserialize;
-
-#[cfg(feature = "workers")]
-use wasm_bindgen::{self, prelude::*};
-
-#[cfg(feature = "workers")]
-use web_sys::WorkerGlobalScope;
 
 pub trait ChartExt: erased_serde::Serialize {
     type DS;
@@ -101,74 +99,76 @@ pub trait ChartExt: erased_serde::Serialize {
 }
 
 #[cfg(feature = "workers")]
-pub fn is_worker() -> bool {
-    js_sys::global().dyn_into::<WorkerGlobalScope>().is_ok()
-}
-
-#[cfg(feature = "workers")]
 mod worker_chart {
-    use std::{future::Future, pin::Pin};
+    use std::{error::Error, future::Future, pin::Pin};
 
+    use crate::worker::ChartWorker;
     use crate::*;
 
-    pub trait WorkerChartExt: ChartExt {
-        #[allow(clippy::wrong_self_convention, clippy::type_complexity)]
+    /// Builds a [`WorkerChart`] from a chart. The chart is kept as a Rust value
+    /// and only serialized once it reaches the worker (`render_async`), so the
+    /// dataset never serializes on the main thread.
+    pub trait WorkerChartExt: ChartExt + Send + 'static + Sized {
+        /// Boot a dedicated worker (default JS lib URLs) and stage this chart on
+        /// it. For a shared worker across many charts, construct a
+        /// [`ChartWorker`] yourself and use [`WorkerChart::on`].
+        #[allow(clippy::type_complexity)]
         fn into_worker_chart(
-            &self,
-            imports_block: String,
-        ) -> Pin<Box<dyn Future<Output = Result<WorkerChart, Box<dyn std::error::Error>>> + '_>>
-        {
+            self,
+        ) -> Pin<Box<dyn Future<Output = Result<WorkerChart<Self>, Box<dyn Error>>>>> {
             Box::pin(async move {
-                Ok(WorkerChart {
-                    obj: self.into_json(),
-                    id: self.get_id().into(),
-                    mutate: false,
-                    plugins: String::new(),
-                    defaults: String::new(),
-                    worker: crate::worker::ChartWorker::new(imports_block).await?,
-                })
+                let worker = ChartWorker::new().await?;
+                Ok(WorkerChart::on(worker, self))
             })
         }
     }
 
-    #[wasm_bindgen]
-    #[derive(Clone)]
+    /// A chart staged on a worker, awaiting `render_async`. Generic over the
+    /// concrete chart type so the chart can ride to the worker by pointer.
     #[must_use = "\nAppend .render_async()\n"]
-    pub struct WorkerChart {
-        pub(crate) obj: JsValue,
-        pub(crate) id: String,
-        pub(crate) mutate: bool,
-        pub(crate) plugins: String,
-        pub(crate) defaults: String,
-        pub(crate) worker: crate::worker::ChartWorker,
+    pub struct WorkerChart<C: ChartExt> {
+        chart: C,
+        worker: ChartWorker,
+        plugins: String,
+        defaults: String,
     }
-    impl WorkerChart {
-        pub async fn render_async(self) -> Result<(), Box<dyn std::error::Error>> {
+
+    impl<C: ChartExt + Send + 'static> WorkerChart<C> {
+        /// Stage `chart` on an existing (possibly shared) worker.
+        pub fn on(worker: ChartWorker, chart: C) -> Self {
+            Self {
+                chart,
+                worker,
+                plugins: String::new(),
+                defaults: String::new(),
+            }
+        }
+
+        /// Render the chart on the worker. Consumes the builder; the chart moves
+        /// to the worker by pointer and is serialized there.
+        pub async fn render_async(self) -> Result<(), Box<dyn Error>> {
+            let id = self.chart.get_id().to_string();
             self.worker
-                .render(self.obj, &self.id, self.mutate, self.plugins, self.defaults)
+                .render(self.chart, id, self.plugins, self.defaults)
                 .await
         }
 
-        pub async fn update_async(self, animate: bool) -> Result<bool, Box<dyn std::error::Error>> {
-            self.worker.update(self.obj, &self.id, animate).await
+        /// Update a chart previously rendered on this worker.
+        pub async fn update_async(self, animate: bool) -> Result<bool, Box<dyn Error>> {
+            let id = self.chart.get_id().to_string();
+            self.worker.update(self.chart, id, animate).await
         }
 
         #[must_use = "\nAppend .render_async()\n"]
-        pub fn mutate(&mut self) -> Self {
-            self.mutate = true;
-            self.clone()
-        }
-
-        #[must_use = "\nAppend .render_async()\n"]
-        pub fn plugins(&mut self, plugins: impl Into<String>) -> Self {
+        pub fn plugins(mut self, plugins: impl Into<String>) -> Self {
             self.plugins = plugins.into();
-            self.clone()
+            self
         }
 
         #[must_use = "\nAppend .render_async()\n"]
-        pub fn defaults(&mut self, defaults: impl Into<String>) -> Self {
+        pub fn defaults(mut self, defaults: impl Into<String>) -> Self {
             self.defaults = format!("{}\n{}", self.defaults, defaults.into());
-            self.to_owned()
+            self
         }
     }
 }
