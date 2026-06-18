@@ -9,7 +9,7 @@
 //! forwards pointer-light mouse events.
 //!
 //! JavaScript surface: this module keeps almost nothing in JS. The chart
-//! building (`derationalize`, plugin/defaults `eval`, `new Chart`, config swap,
+//! building (`rationalise`, plugin/defaults `eval`, `new Chart`, config swap,
 //! instance registry, listeners) is all Rust via `js-sys`. The two irreducible
 //! bits are Rust-constructed `Function`s (no `.js` files):
 //!   * a one-line dynamic-`import()` wrapper (`import` is syntax, not callable
@@ -19,34 +19,34 @@
 //!
 //! Everything else is Rust. `worker_shim.js` / `worker_imports.js` are gone.
 
-use crate::ChartExt;
 use js_sys::{Array, Function, Object, Promise, Reflect};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 
-/// CDN URLs for the worker's JS dependencies (defaults match the example's
-/// versions). Override via [`ChartWorker::with_libs`].
-#[derive(Clone, Debug)]
-pub struct WorkerLibs {
-    pub chart_js: String,
-    pub luxon: String,
-    pub luxon_adapter: String,
-}
-impl Default for WorkerLibs {
-    fn default() -> Self {
-        Self {
-            chart_js: "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js".into(),
-            luxon: "https://cdn.jsdelivr.net/npm/luxon@^2/+esm".into(),
-            luxon_adapter:
-                "https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1/dist/chartjs-adapter-luxon.umd.min.js"
-                    .into(),
-        }
-    }
-}
+/// The default worker imports block: Chart.js, Luxon (ESM, bound to
+/// `self.luxon`), and the Luxon date adapter.
+///
+/// The worker boot imports are just a block of JavaScript — the same model as
+/// the pre-worxide `imports_block`. Pass your own to
+/// [`ChartWorker::with_imports`] / [`WorkerChartExt::into_worker_chart`], or
+/// extend this one: `format!("{DEFAULT_WORKER_IMPORTS}\n{my_extra_imports}")`.
+/// Use dynamic `import(...)` (static `import` syntax is unavailable here) and
+/// bind anything the adapter/plugins read as a global onto `self`.
+pub const DEFAULT_WORKER_IMPORTS: &str = r#"
+// Chart.js
+await import("https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js");
+
+// Luxon (ESM): import() returns the module namespace; bind it to self.luxon so
+// the date adapter (which reads the global `luxon`) finds it.
+self.luxon = await import("https://cdn.jsdelivr.net/npm/luxon@^2/+esm");
+
+// Luxon date adapter for Chart.js time scales.
+await import("https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1/dist/chartjs-adapter-luxon.umd.min.js");
+"#;
 
 // ===========================================================================
 // Worker side  — runs on the worker, via run/run_blocking closures or the
@@ -55,8 +55,12 @@ impl Default for WorkerLibs {
 
 struct CanvasEntry {
     canvas: JsValue,
+    /// CSS pixels (the on-screen element's size).
     width: f64,
     height: f64,
+    /// devicePixelRatio captured on the main thread. Applied as Chart.js's
+    /// `options.devicePixelRatio`; Chart.js multiplies the bitmap by it once.
+    dpr: f64,
 }
 
 thread_local! {
@@ -64,10 +68,6 @@ thread_local! {
     static CANVASES: RefCell<HashMap<String, CanvasEntry>> = RefCell::new(HashMap::new());
     /// Live Chart.js instances, keyed by chart id.
     static CHARTS: RefCell<HashMap<String, JsValue>> = RefCell::new(HashMap::new());
-
-    /// `url => import(url)`. The single irreducible line of JS: `import` is
-    /// syntax and can't be obtained by reference, so we wrap it once.
-    static IMPORT_FN: Function = Function::new_with_args("url", "return import(url);");
 
     /// Chart.js mouse/tooltip/legend interaction, kept as JS because doing it
     /// through `Reflect` would be far longer and more brittle. Args:
@@ -85,21 +85,41 @@ thread_local! {
                 return computedStyles;
             } } };
         }
-        const ev = {
-            type: eventType, x, y, offsetX: x, offsetY: y,
+        // Map DOM event names to the names Chart.js handles internally.
+        const type = eventType === 'mouseleave' ? 'mouseout' : eventType;
+
+        // A native-event stand-in. Chart.js reads x/y off the normalized event
+        // (set below); native is only used for target / preventDefault.
+        const native = {
+            type, offsetX: x, offsetY: y, clientX: x, clientY: y,
             target: chart.canvas, currentTarget: chart.canvas,
             preventDefault() {}, stopPropagation() {},
         };
+        // Normalized event shaped exactly like Chart.js's DOM platform builds.
+        const ev = { type, chart, native, x, y };
+
+        // Preferred path: route through Chart.js's real event handler — the same
+        // code main-thread charts use. Hit-testing and hover/tooltip state match
+        // the main thread, and legend-item clicks are handled natively by the
+        // legend plugin. Note: Chart.js disables animations on an OffscreenCanvas
+        // worker (issue #10305), so transitions are instant here regardless —
+        // the tooltip updates correctly, just without the main-thread glide.
+        if (typeof chart._eventHandler === 'function') {
+            chart._eventHandler(ev);
+            return;
+        }
+
+        // Fallback for a Chart.js build without _eventHandler: drive it manually.
         const mode = chart.options.interaction?.mode || 'nearest';
         const opts = chart.options.interaction || { intersect: false };
-        if (eventType === 'mousemove') {
+        if (type === 'mousemove') {
             chart.tooltip.setActiveElements(
                 chart.getElementsAtEventForMode(ev, mode, opts, false), ev);
-            chart.draw();
-        } else if (eventType === 'mouseleave') {
+            chart.render();
+        } else if (type === 'mouseout') {
             chart.tooltip.setActiveElements([], ev);
-            chart.draw();
-        } else if (eventType === 'click') {
+            chart.render();
+        } else if (type === 'click') {
             const legend = chart.legend;
             if (legend && legend.legendHitBoxes) {
                 for (let i = 0; i < legend.legendHitBoxes.length; i++) {
@@ -111,21 +131,71 @@ thread_local! {
                 }
             }
             const els = chart.getElementsAtEventForMode(ev, mode, opts, false);
-            chart._handleEvent(ev);
             if (chart.options.onClick) chart.options.onClick(ev, els, chart);
         }
         "#,
     );
 }
 
-fn worker_global() -> web_sys::DedicatedWorkerGlobalScope {
-    js_sys::global().unchecked_into()
+/// Measure an element's CSS box and pin it to integer pixels.
+///
+/// The on-screen `<canvas>` is sized by CSS (e.g. `w-full`), which routinely
+/// lands on fractional widths like `1255.5px`. The worker builds the
+/// OffscreenCanvas bitmap from an integer size, so a fractional display box
+/// forces the browser to resample the bitmap — the intermittent blur. Mirror
+/// what Chart.js does on the main thread: floor the real (fractional) box to
+/// integers and pin them as inline `width`/`height` styles, so the displayed
+/// box is exactly the integer size we render at. Returns `(width, height)`.
+fn pin_integer_size(el: &web_sys::Element) -> (f64, f64) {
+    let rect = el.get_bounding_client_rect();
+    let w = rect.width().floor().max(1.0);
+    let h = rect.height().floor().max(1.0);
+    if let Some(he) = el.dyn_ref::<web_sys::HtmlElement>() {
+        let style = he.style();
+        let _ = style.set_property("width", &format!("{w}px"));
+        let _ = style.set_property("height", &format!("{h}px"));
+    }
+    (w, h)
 }
 
-/// `import(url)` as a future, via the wrapper Function.
-async fn dyn_import(url: &str) -> Result<JsValue, JsValue> {
-    let promise = IMPORT_FN.with(|f| f.call1(&JsValue::NULL, &JsValue::from_str(url)))?;
-    JsFuture::from(Promise::from(promise)).await
+/// Trailing-edge debounce: (re)arm a 100ms timer that fires `send_fn`.
+fn debounce(timer: &Rc<Cell<i32>>, send_fn: &Function) {
+    if let Some(w) = web_sys::window() {
+        let t = timer.get();
+        if t != 0 {
+            w.clear_timeout_with_handle(t);
+        }
+        if let Ok(h) = w.set_timeout_with_callback_and_timeout_and_arguments_0(send_fn, 100) {
+            timer.set(h);
+        }
+    }
+}
+
+/// DOM-side resize/zoom watchers for one worker chart. Dropping this (on chart
+/// teardown) disconnects the ResizeObserver and removes the window listener.
+pub(crate) struct ResizeWatchers {
+    observer: Option<web_sys::ResizeObserver>,
+    win_cb: Closure<dyn FnMut()>,
+    _ro_cb: Closure<dyn FnMut()>,
+    _send_cb: Closure<dyn FnMut()>,
+}
+
+impl Drop for ResizeWatchers {
+    fn drop(&mut self) {
+        if let Some(o) = &self.observer {
+            o.disconnect();
+        }
+        if let Some(w) = web_sys::window() {
+            let _ = w.remove_event_listener_with_callback(
+                "resize",
+                self.win_cb.as_ref().unchecked_ref(),
+            );
+        }
+    }
+}
+
+fn worker_global() -> web_sys::DedicatedWorkerGlobalScope {
+    js_sys::global().unchecked_into()
 }
 
 /// Resolve the global `Chart` constructor (set by the Chart.js UMD import).
@@ -145,64 +215,11 @@ fn call_method(obj: &JsValue, name: &str, args: &[JsValue]) -> Result<JsValue, J
     Reflect::apply(&f, obj, &arr)
 }
 
-fn is_plain_object(v: &JsValue) -> bool {
-    v.is_object() && !Array::is_array(v) && !v.is_null()
-}
-
-/// Rebuild serialized closures (`{args, body, closure_id, return_value}`) into
-/// real `Function`s, recursively — the Rust port of the JS `derationalize`.
-///
-/// NOTE: the `closure_id` branch preserves the original shim's placeholder
-/// (`return 'orange'`) verbatim — a known pre-existing bug, not introduced
-/// here; left as-is so this port changes nothing semantically.
-fn derationalize(o: JsValue) -> JsValue {
-    if Array::is_array(&o) {
-        let out = Array::new();
-        for item in Array::from(&o).iter() {
-            out.push(&derationalize(item));
-        }
-        return out.into();
-    }
-    if !is_plain_object(&o) {
-        return o;
-    }
-    let has = |k: &str| Reflect::has(&o, &k.into()).unwrap_or(false);
-    if has("args") && has("body") && has("closure_id") && has("return_value") {
-        let args = Reflect::get(&o, &"args".into()).unwrap_or(JsValue::UNDEFINED);
-        let arg_names = Array::from(&args)
-            .iter()
-            .filter_map(|a| a.as_string())
-            .collect::<Vec<_>>()
-            .join(", ");
-        let closure_id = Reflect::get(&o, &"closure_id".into()).unwrap_or(JsValue::UNDEFINED);
-        let body_src = if closure_id.is_truthy() {
-            " \n return 'orange'; \n ".to_string()
-        } else {
-            let body = Reflect::get(&o, &"body".into())
-                .ok()
-                .and_then(|v| v.as_string())
-                .unwrap_or_default();
-            let ret = Reflect::get(&o, &"return_value".into())
-                .ok()
-                .and_then(|v| v.as_string())
-                .unwrap_or_default();
-            format!(" {body} \n return {ret} ")
-        };
-        return Function::new_with_args(&arg_names, &body_src).into();
-    }
-    let out = Object::new();
-    for entry in Object::entries(&o.clone().unchecked_into::<Object>()).iter() {
-        let pair = Array::from(&entry);
-        let _ = Reflect::set(&out, &pair.get(0), &derationalize(pair.get(1)));
-    }
-    out.into()
-}
-
 /// Build a fresh Chart.js instance on the transferred canvas. `obj` is the
 /// chart config already serialized (on this worker) by `into_json`.
 fn build_chart(
     entry: &CanvasEntry,
-    mut obj: JsValue,
+    obj: JsValue,
     plugins: &str,
     defaults: &str,
 ) -> Result<JsValue, JsValue> {
@@ -216,8 +233,13 @@ fn build_chart(
         Reflect::set(&obj, &"plugins".into(), &plugins_val)?;
     }
 
-    obj = derationalize(obj);
+    crate::utils::rationalise(&obj);
 
+    // Crisp DPR, applied exactly once: set the bitmap to the CSS pixel size and
+    // hand Chart.js `options.devicePixelRatio = dpr`. Chart.js's retinaScale
+    // then multiplies the buffer to css*dpr and scales the context by dpr — the
+    // single application. (Pre-multiplying the bitmap AND setting devicePixelRatio
+    // double-counts and collapses the plot to a sliver.)
     Reflect::set(
         &entry.canvas,
         &"width".into(),
@@ -229,8 +251,37 @@ fn build_chart(
         &JsValue::from_f64(entry.height),
     )?;
 
+    // Force responsive off. There is no DOM element / ResizeObserver on a
+    // worker, so Chart.js's responsive sizing resolves to a bogus size and
+    // collapses the plot area. We drive sizing ourselves via the resize channel.
+    let options = {
+        let o = Reflect::get(&obj, &"options".into())?;
+        if o.is_object() {
+            o
+        } else {
+            let o: JsValue = Object::new().into();
+            Reflect::set(&obj, &"options".into(), &o)?;
+            o
+        }
+    };
+    Reflect::set(&options, &"responsive".into(), &JsValue::FALSE)?;
+    Reflect::set(&options, &"maintainAspectRatio".into(), &JsValue::FALSE)?;
+    Reflect::set(
+        &options,
+        &"devicePixelRatio".into(),
+        &JsValue::from_f64(entry.dpr),
+    )?;
+
     let chart = Reflect::construct(&chart_ctor()?, &Array::of2(&entry.canvas, &obj))?;
-    let _ = call_method(&chart, "resize", &[]);
+    // Explicit logical resize so Chart.js sets the buffer to css*dpr.
+    let _ = call_method(
+        &chart,
+        "resize",
+        &[
+            JsValue::from_f64(entry.width),
+            JsValue::from_f64(entry.height),
+        ],
+    );
 
     // Initial animation unless options.animation === false.
     let animate = Reflect::get(&obj, &"options".into())
@@ -247,7 +298,7 @@ fn build_chart(
 /// Swap a live chart's config and update. Returns whether it succeeded.
 fn update_chart(chart: &JsValue, updated: JsValue, animate: bool) -> bool {
     let go = || -> Result<(), JsValue> {
-        let updated = derationalize(updated);
+        crate::utils::rationalise(&updated);
         let inner = Reflect::get(&Reflect::get(chart, &"config".into())?, &"_config".into())?;
         Reflect::set(
             &inner,
@@ -282,7 +333,7 @@ fn update_chart(chart: &JsValue, updated: JsValue, animate: bool) -> bool {
 }
 
 /// Stash a transferred OffscreenCanvas (called by the message listener).
-fn store_canvas(id: String, canvas: JsValue, width: f64, height: f64) {
+fn store_canvas(id: String, canvas: JsValue, width: f64, height: f64, dpr: f64) {
     CANVASES.with(|c| {
         c.borrow_mut().insert(
             id,
@@ -290,8 +341,34 @@ fn store_canvas(id: String, canvas: JsValue, width: f64, height: f64) {
                 canvas,
                 width,
                 height,
+                dpr,
             },
         );
+    });
+}
+
+/// Resize a live chart (container resize or zoom/DPR change). Updates the stored
+/// size + dpr, applies the new `devicePixelRatio`, and calls Chart.js `resize`,
+/// which re-multiplies the OffscreenCanvas bitmap to device px and redraws crisp.
+fn resize_chart(id: &str, width: f64, height: f64, dpr: f64) {
+    CANVASES.with(|c| {
+        if let Some(e) = c.borrow_mut().get_mut(id) {
+            e.width = width;
+            e.height = height;
+            e.dpr = dpr;
+        }
+    });
+    CHARTS.with(|m| {
+        if let Some(chart) = m.borrow().get(id) {
+            if let Ok(opts) = Reflect::get(chart, &"options".into()) {
+                let _ = Reflect::set(&opts, &"devicePixelRatio".into(), &JsValue::from_f64(dpr));
+            }
+            let _ = call_method(
+                chart,
+                "resize",
+                &[JsValue::from_f64(width), JsValue::from_f64(height)],
+            );
+        }
     });
 }
 
@@ -319,13 +396,13 @@ fn handle_mouse(id: &str, event_type: &str, x: f64, y: f64, styles: JsValue) {
 /// Worker-side render — the closure body shipped to `run_blocking`. The chart
 /// `C` arrived by pointer; serialize here, pair with the transferred canvas,
 /// build, and keep the instance for later updates.
-pub fn render<C: ChartExt>(
-    chart: C,
+pub fn render(
+    chart: Box<dyn crate::WorkerChartExt>,
     id: String,
     plugins: String,
     defaults: String,
 ) -> Result<(), String> {
-    let obj = chart.into_json(); // serialization happens on the worker
+    let obj = chart.render_json(); // serialization happens on the worker
     let chart_js = CANVASES
         .with(|c| {
             c.borrow()
@@ -340,8 +417,8 @@ pub fn render<C: ChartExt>(
 
 /// Worker-side update — also handed to `run_blocking`. `false` if no live
 /// instance exists for the id or the Chart.js update threw.
-pub fn update<C: ChartExt>(chart: C, id: String, animate: bool) -> bool {
-    let updated = chart.into_json();
+pub fn update(chart: Box<dyn crate::WorkerChartExt>, id: String, animate: bool) -> bool {
+    let updated = chart.render_json();
     CHARTS.with(|m| match m.borrow().get(&id) {
         Some(chart_js) => update_chart(chart_js, updated, animate),
         None => false,
@@ -358,28 +435,22 @@ pub fn forget_chart(id: &str) {
 }
 
 /// One-time worker setup, driven by a `run` call right after the worker boots:
-/// import Chart.js / luxon / adapter, register the canvas-background plugin
+/// run the user's imports block (Chart.js, date adapter, plugins), register the
+/// canvas-background plugin
 /// global, and install the message listener feeding `store_canvas`/`handle_mouse`.
-pub async fn bootstrap(libs: WorkerLibs) -> Result<(), String> {
+pub async fn bootstrap(imports: String) -> Result<(), String> {
     let err = |c: &str, e: JsValue| format!("chart-js-rs bootstrap: {c}: {e:?}");
 
-    dyn_import(&libs.chart_js)
+    // Run the user-controlled imports block (Chart.js, date adapter, plugins).
+    // Wrapped in an async IIFE so `await import(...)` works; `import()` is
+    // available in Function scope even though static `import` syntax is not.
+    let run = Function::new_no_args(&format!("return (async () => {{\n{imports}\n}})();"));
+    let promise = run
+        .call0(&JsValue::NULL)
+        .map_err(|e| err("imports block", e))?;
+    JsFuture::from(Promise::from(promise))
         .await
-        .map_err(|e| err("Chart.js import", e))?;
-
-    // luxon: import the ESM build and bind its namespace to `self.luxon`. The
-    // adapter reads the global `luxon`, and a UMD global build does not reliably
-    // attach itself under `import()` (unlike a classic <script>) — but the ESM
-    // build's import() *returns* the luxon namespace, so we bind that directly.
-    let luxon = dyn_import(&libs.luxon)
-        .await
-        .map_err(|e| err("luxon import", e))?;
-    Reflect::set(&js_sys::global(), &"luxon".into(), &luxon)
-        .map_err(|e| err("bind self.luxon", e))?;
-
-    dyn_import(&libs.luxon_adapter)
-        .await
-        .map_err(|e| err("luxon adapter import", e))?;
+        .map_err(|e| err("imports block", e))?;
 
     // The convenience canvas-background plugin, on globalThis so an eval'd
     // `plugins` block can reference it. Shared with the main-thread path.
@@ -427,6 +498,29 @@ fn install_message_listener() {
                     get("canvas"),
                     get("width").as_f64().unwrap_or(0.0),
                     get("height").as_f64().unwrap_or(0.0),
+                    {
+                        let d = get("dpr").as_f64().unwrap_or(1.0);
+                        if d > 0.0 {
+                            d
+                        } else {
+                            1.0
+                        }
+                    },
+                );
+            }
+            Some("cjsrs-resize") => {
+                resize_chart(
+                    &get("id").as_string().unwrap_or_default(),
+                    get("width").as_f64().unwrap_or(0.0),
+                    get("height").as_f64().unwrap_or(0.0),
+                    {
+                        let d = get("dpr").as_f64().unwrap_or(1.0);
+                        if d > 0.0 {
+                            d
+                        } else {
+                            1.0
+                        }
+                    },
                 );
             }
             Some("cjsrs-mouse") => {
@@ -459,14 +553,14 @@ pub struct ChartWorker {
 impl ChartWorker {
     /// Boot a worker and run its one-time bootstrap (default lib URLs).
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        Self::with_libs(WorkerLibs::default()).await
+        Self::with_imports(DEFAULT_WORKER_IMPORTS.to_string()).await
     }
 
     /// As [`new`](Self::new), with custom JS dependency URLs.
-    pub async fn with_libs(libs: WorkerLibs) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn with_imports(imports: String) -> Result<Self, Box<dyn std::error::Error>> {
         let worker = worxide::Worker::new().await.map_err(|e| e.to_string())?;
         worker
-            .run(move || async move { bootstrap(libs).await })
+            .run(move || async move { bootstrap(imports).await })
             .await
             .map_err(|e| e.to_string())?
             .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
@@ -475,18 +569,47 @@ impl ChartWorker {
         })
     }
 
+    /// Run a consumer-provided setup closure ON THE WORKER, after `bootstrap`
+    /// (Chart.js + plugin libs are loaded) and before the chart is built. This
+    /// is the hook for registering custom Chart.js plugins on the worker's
+    /// `Chart` global and for moving owned Rust state (captured in the closure)
+    /// across to the worker. Generic: it runs whatever closure it's given.
+    pub(crate) async fn run_setup(
+        &self,
+        f: Box<dyn FnOnce() + Send + 'static>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        self.worker
+            .run(move || async move {
+                f();
+                Ok::<(), String>(())
+            })
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| -> Box<dyn std::error::Error> { e.into() })
+    }
+
+    /// Terminate the underlying worker, freeing the OS worker thread and
+    /// everything it held (OffscreenCanvas, Chart.js instance, worker-side
+    /// state). Internal: the chart lifetime is managed for the consumer.
+    pub(crate) fn terminate(&self) {
+        self.worker.terminate();
+    }
+
     /// Render a chart off the main thread: transfer the canvas, wire DOM mouse
     /// forwarding, then dispatch `render` with the chart moved across by pointer
     /// (no main-thread serialization).
-    pub(crate) async fn render<C: ChartExt + Send + 'static>(
+    pub(crate) async fn render(
         &self,
-        chart: C,
+        chart: Box<dyn crate::WorkerChartExt>,
         id: String,
         plugins: String,
         defaults: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        self.transfer_canvas(&id)?;
+        // Attach DOM mouse listeners BEFORE transferring control to the
+        // OffscreenCanvas — matching the original worker. Listeners added after
+        // transfer don't reliably fire, so order matters here.
         self.install_dom_mouse_handlers(&id)?;
+        self.transfer_canvas(&id)?;
         self.worker
             .run_blocking(move || render(chart, id, plugins, defaults))
             .await
@@ -494,9 +617,9 @@ impl ChartWorker {
             .map_err(|e| -> Box<dyn std::error::Error> { e.into() })
     }
 
-    pub(crate) async fn update<C: ChartExt + Send + 'static>(
+    pub(crate) async fn update(
         &self,
-        chart: C,
+        chart: Box<dyn crate::WorkerChartExt>,
         id: String,
         animate: bool,
     ) -> Result<bool, Box<dyn std::error::Error>> {
@@ -510,16 +633,101 @@ impl ChartWorker {
     /// Measure the `<canvas>`, hand its control to an OffscreenCanvas, and
     /// transfer that to the worker — the one place a transfer list is required,
     /// so it goes over `raw()` rather than worxide's dispatch.
+    /// Watch the on-screen canvas for size changes (ResizeObserver) and the
+    /// window for zoom / DPR changes (resize event), posting debounced (100ms)
+    /// `cjsrs-resize` frames so the worker resizes the chart crisply. The
+    /// returned handle must be kept alive for the chart's lifetime; dropping it
+    /// tears the watchers down.
+    pub(crate) fn install_resize_watchers(
+        &self,
+        el: &web_sys::Element,
+        id: &str,
+    ) -> ResizeWatchers {
+        let worker = self.worker.clone();
+        let id = id.to_string();
+        let el = el.clone();
+        let timer: Rc<Cell<i32>> = Rc::new(Cell::new(0));
+
+        // Trailing-edge sender: read current size + dpr, post one resize frame.
+        let send_cb = Closure::<dyn FnMut()>::new({
+            let worker = worker.clone();
+            let id = id.clone();
+            let el = el.clone();
+            let timer = timer.clone();
+            move || {
+                timer.set(0);
+                let (w, h) = pin_integer_size(&el);
+                let dpr = web_sys::window()
+                    .map(|x| x.device_pixel_ratio())
+                    .filter(|d| *d > 0.0)
+                    .unwrap_or(1.0);
+                let msg = Object::new();
+                let _ = Reflect::set(&msg, &"type".into(), &"cjsrs-resize".into());
+                let _ = Reflect::set(&msg, &"id".into(), &id.clone().into());
+                let _ = Reflect::set(&msg, &"width".into(), &JsValue::from_f64(w));
+                let _ = Reflect::set(&msg, &"height".into(), &JsValue::from_f64(h));
+                let _ = Reflect::set(&msg, &"dpr".into(), &JsValue::from_f64(dpr));
+                let _ = worker.raw().post_message(&msg);
+            }
+        });
+        let send_fn: Function = send_cb.as_ref().unchecked_ref::<Function>().clone();
+
+        // ResizeObserver on the element (container / layout changes).
+        let ro_cb = Closure::<dyn FnMut()>::new({
+            let timer = timer.clone();
+            let send_fn = send_fn.clone();
+            move || debounce(&timer, &send_fn)
+        });
+        let observer = web_sys::ResizeObserver::new(ro_cb.as_ref().unchecked_ref()).ok();
+        if let Some(o) = &observer {
+            o.observe(&el);
+        }
+
+        // Window resize (zoom / viewport changes, incl. devicePixelRatio).
+        let win_cb = Closure::<dyn FnMut()>::new({
+            let timer = timer.clone();
+            let send_fn = send_fn.clone();
+            move || debounce(&timer, &send_fn)
+        });
+        if let Some(w) = web_sys::window() {
+            let _ = w.add_event_listener_with_callback("resize", win_cb.as_ref().unchecked_ref());
+        }
+
+        ResizeWatchers {
+            observer,
+            win_cb,
+            _ro_cb: ro_cb,
+            _send_cb: send_cb,
+        }
+    }
+
     fn transfer_canvas(&self, id: &str) -> Result<(), Box<dyn std::error::Error>> {
         let el = gloo_utils::document()
             .get_element_by_id(id)
             .ok_or_else(|| format!("no element with id `{id}`"))?;
-        let width = el.client_width() as f64;
-        let height = el.client_height() as f64;
+        let (width, height) = pin_integer_size(&el);
+        let dpr = web_sys::window()
+            .map(|w| w.device_pixel_ratio())
+            .filter(|d| *d > 0.0)
+            .unwrap_or(1.0);
 
-        let offscreen = el
+        let canvas = el
             .dyn_into::<web_sys::HtmlCanvasElement>()
-            .map_err(|_| format!("element `{id}` is not a <canvas>"))?
+            .map_err(|_| format!("element `{id}` is not a <canvas>"))?;
+
+        // A canvas can be transferred exactly once, ever. Mark it on first
+        // transfer and refuse a second attempt with a clean error instead of
+        // letting `transferControlToOffscreen` throw `InvalidStateError`.
+        if canvas.has_attribute("data-cjsrs-transferred") {
+            return Err(format!(
+                "canvas `{id}` was already transferred to a worker; render once \
+                 per element (reuse goes through update)"
+            )
+            .into());
+        }
+        let _ = canvas.set_attribute("data-cjsrs-transferred", "1");
+
+        let offscreen = canvas
             .transfer_control_to_offscreen()
             .map_err(|e| format!("{e:?}"))?;
 
@@ -533,6 +741,7 @@ impl ChartWorker {
         set("canvas", &offscreen)?;
         set("width", &JsValue::from_f64(width))?;
         set("height", &JsValue::from_f64(height))?;
+        set("dpr", &JsValue::from_f64(dpr))?;
 
         self.worker
             .raw()
@@ -547,9 +756,6 @@ impl ChartWorker {
         let el = gloo_utils::document()
             .get_element_by_id(id)
             .ok_or_else(|| format!("no element with id `{id}`"))?;
-        let width = el.client_width() as f64;
-        let height = el.client_height() as f64;
-        let rect = el.get_bounding_client_rect();
         let styles = web_sys::window()
             .and_then(|w| w.get_computed_style(&el).ok().flatten())
             .ok_or("could not read computed style")?;
@@ -580,7 +786,7 @@ impl ChartWorker {
         ] {
             let worker = self.worker.clone();
             let chart_id = id.to_string();
-            let rect = rect.clone();
+            let el_evt = el.clone();
             let computed = computed();
             let cb =
                 Closure::<dyn FnMut(web_sys::MouseEvent)>::new(move |e: web_sys::MouseEvent| {
@@ -589,8 +795,13 @@ impl ChartWorker {
                     let _ = Reflect::set(&msg, &"eventType".into(), &event_type.into());
                     let _ = Reflect::set(&msg, &"chartId".into(), &chart_id.clone().into());
                     if with_xy {
-                        let x = (e.client_x() as f64 - rect.left()) * (width / rect.width());
-                        let y = (e.client_y() as f64 - rect.top()) * (height / rect.height());
+                        // Read geometry fresh each event so coords stay correct
+                        // after resize / zoom / scroll.
+                        let rect = el_evt.get_bounding_client_rect();
+                        let cw = el_evt.client_width() as f64;
+                        let ch = el_evt.client_height() as f64;
+                        let x = (e.client_x() as f64 - rect.left()) * (cw / rect.width());
+                        let y = (e.client_y() as f64 - rect.top()) * (ch / rect.height());
                         let _ = Reflect::set(&msg, &"x".into(), &JsValue::from_f64(x));
                         let _ = Reflect::set(&msg, &"y".into(), &JsValue::from_f64(y));
                     }

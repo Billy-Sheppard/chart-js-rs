@@ -7,6 +7,7 @@
 //! through `gloo-utils` (already a dependency), so this stays on stable Rust.
 
 use js_sys::{Array, Function, Reflect};
+use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 
 /// The global `Chart` (set by the Chart.js UMD `<script>` on the page).
@@ -56,8 +57,47 @@ pub fn get_chart(id: &str) -> JsValue {
 
 /// Build a chart on the `#id` canvas: optional `defaults`/`plugins` eval, the
 /// optional `window.mutate_chart_object` hook, then `new Chart(el, obj)`.
+/// Install (once) a window-resize listener that, on an actual `devicePixelRatio`
+/// change (browser zoom), resizes every live Chart.js instance so it redraws
+/// crisp. Container resizes are already handled by Chart.js's own
+/// `responsive: true` on the main thread, so this only acts when the DPR moves —
+/// the gap Chart.js doesn't cover. Relies on Chart.js's internal instance
+/// registry (`Chart.instances`).
+fn ensure_mt_dpr_watcher() {
+    thread_local! {
+        static INSTALLED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+    INSTALLED.with(|f| {
+        if f.get() {
+            return;
+        }
+        f.set(true);
+        let cb = Closure::<dyn FnMut()>::new(|| {
+            let _ = js_sys::eval(
+                r#"(function () {
+                    try {
+                        var C = self.Chart || (self.window && self.window.Chart);
+                        if (!C) return;
+                        var dpr = self.devicePixelRatio || 1;
+                        if (self.__cjsrs_last_dpr === undefined) self.__cjsrs_last_dpr = dpr;
+                        if (dpr === self.__cjsrs_last_dpr) return;
+                        self.__cjsrs_last_dpr = dpr;
+                        var insts = C.instances || {};
+                        for (var k in insts) { try { insts[k].resize(); } catch (e) {} }
+                    } catch (e) {}
+                })()"#,
+            );
+        });
+        if let Some(w) = web_sys::window() {
+            let _ = w.add_event_listener_with_callback("resize", cb.as_ref().unchecked_ref());
+        }
+        cb.forget(); // lives for the page lifetime
+    });
+}
+
 pub fn render_chart(v: JsValue, id: &str, mutate: bool, plugins: String, defaults: String) {
     register_chart_area_background();
+    ensure_mt_dpr_watcher();
 
     if !defaults.is_empty() {
         // Side-effecting block (e.g. `Chart.defaults.*`), in global scope.

@@ -14,34 +14,34 @@ homepage = "https://github.com/Billy-Sheppard/chart-js-rs"
 [dependencies]
 gloo-console = { version = "0.4.0" }
 gloo-utils = { version = "0.3.0", features = ["serde"] }
-js-sys = "0.3.99"
-rust_decimal = "1.42.0"
+js-sys = "0.3.102"
+rust_decimal = "1.42.1"
 serde = { version = "1.0.228", features = ["derive"] }
 erased-serde = { version = "0.4.10" }
 serde_json = "1.0.150"
 serde-wasm-bindgen = "0.6.5"
-wasm-bindgen = { version = "0.2.122", features = ["serde-serialize"] }
-uuid = { version = "1.23.2", features = ["v4", "js"] }
-web-sys = { version = "0.3.99", optional = true, features = [
+wasm-bindgen = { version = "0.2.125", features = ["serde-serialize"] }
+uuid = { version = "1.23.3", features = ["v4", "js"] }
+web-sys = { version = "0.3.102", optional = true, features = [
     "DomRect",
     "HtmlCanvasElement",
     "OffscreenCanvas",
     "WorkerOptions",
     "WorkerType",
 ] }
-worxide = { git = "https://github.com/Billy-Sheppard/worxide.git", branch = "persistent-workers", optional = true }
-wasm-bindgen-futures = { version = "0.4", optional = true }
-itertools = "0.14.0"
+worxide = { version = "0.0.5", optional = true }
+wasm-bindgen-futures = { version = "0.4.75", optional = true }
+itertools = "0.15.0"
 
 [workspace]
 members = ["examples"]
 
 [build-dependencies]
 heck = "0.5.0"
-itertools = "0.14.0"
+itertools = "0.15.0"
 quote = "1.0.45"
 proc-macro2 = "1.0.106"
-syn = { features = ["parsing", "full"], version = "2.0.117" }
+syn = { features = ["parsing", "full"], version = "2.0.118" }
 
 [features]
 default = []
@@ -54,7 +54,13 @@ workers = [
     "web-sys/DomRect",
     "web-sys/Element",
     "web-sys/HtmlCanvasElement",
+    "web-sys/HtmlElement",
     "web-sys/MouseEvent",
+    "web-sys/MutationObserver",
+    "web-sys/MutationObserverInit",
+    "web-sys/Node",
+    "web-sys/NodeList",
     "web-sys/OffscreenCanvas",
+    "web-sys/ResizeObserver",
     "web-sys/Window",
 ]

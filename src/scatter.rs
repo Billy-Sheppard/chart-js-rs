@@ -14,8 +14,6 @@ pub struct Scatter {
     id: String,
 }
 
-#[cfg(feature = "workers")]
-impl crate::WorkerChartExt for Scatter {}
 impl ChartExt for Scatter {
     type DS = Dataset<Vec<XYDataset>>;
 

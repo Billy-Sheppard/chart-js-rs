@@ -353,8 +353,8 @@ impl Model {
                     gloo::console::log!("Starting render...");
                     // The chart crosses to the worker as a Rust value (by pointer);
                     // serialization + Chart.js construction happen on the worker.
-                    chart
-                        .into_worker_chart()
+                    Box::new(chart)
+                        .into_worker_chart(DEFAULT_WORKER_IMPORTS.to_string())
                         .await
                         .unwrap()
                         .render_async()

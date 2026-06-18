@@ -125,55 +125,64 @@ impl Chart {
         update_chart(self.obj, &self.id, animate)
     }
 
-    /// Converts serialized FnWithArgs to JS Function's
-    /// For new chart options, this will need to be updated
+    /// Converts serialized `FnWithArgs` to JS `Function`s, in place.
+    /// See [`rationalise`]; for new chart options, update that fn.
     pub fn rationalise_js(&self) {
-        // Handle data.datasets
-        Array::from(&get_path(&self.obj, "data.datasets").unwrap())
-            .iter()
-            .for_each(|dataset| {
-                FnWithArgsOrT::<2, String>::rationalise_1_level(&dataset, "backgroundColor");
-                FnWithArgs::<1>::rationalise_2_levels(&dataset, ("segment", "borderDash"));
-                FnWithArgs::<1>::rationalise_2_levels(&dataset, ("segment", "borderColor"));
-                FnWithArgsOrT::<1, String>::rationalise_2_levels(&dataset, ("datalabels", "align"));
-                FnWithArgsOrT::<1, String>::rationalise_2_levels(
-                    &dataset,
-                    ("datalabels", "anchor"),
-                );
-                FnWithArgsOrT::<1, String>::rationalise_2_levels(
-                    &dataset,
-                    ("datalabels", "backgroundColor"),
-                );
-                FnWithArgs::<2>::rationalise_2_levels(&dataset, ("datalabels", "formatter"));
-                FnWithArgsOrT::<1, NumberString>::rationalise_2_levels(
-                    &dataset,
-                    ("datalabels", "offset"),
-                );
-                FnWithArgsOrT::<1, BoolString>::rationalise_2_levels(
-                    &dataset,
-                    ("datalabels", "display"),
-                );
+        rationalise(&self.obj);
+    }
+}
+
+/// Converts serialized `FnWithArgs` in a chart config into real JS `Function`s,
+/// in place, at the known closure-bearing paths.
+///
+/// Shared by the main-thread render (`Chart::render`) and the worker render
+/// (`worker::build_chart`), so neither walks the whole config — datasets and all
+/// their points included — looking for closures. Visiting only these paths is
+/// O(callback-sites) instead of O(data). When adding a chart option that can
+/// hold a callback, add its path here.
+pub(crate) fn rationalise(obj: &JsValue) {
+    // data.datasets[*]
+    if let Some(datasets) = object_values_at(obj, "data.datasets") {
+        Array::from(&datasets).iter().for_each(|dataset| {
+            FnWithArgsOrT::<2, String>::rationalise_1_level(&dataset, "backgroundColor");
+            FnWithArgs::<1>::rationalise_2_levels(&dataset, ("segment", "borderDash"));
+            FnWithArgs::<1>::rationalise_2_levels(&dataset, ("segment", "borderColor"));
+            FnWithArgsOrT::<1, String>::rationalise_2_levels(&dataset, ("datalabels", "align"));
+            FnWithArgsOrT::<1, String>::rationalise_2_levels(&dataset, ("datalabels", "anchor"));
+            FnWithArgsOrT::<1, String>::rationalise_2_levels(
+                &dataset,
+                ("datalabels", "backgroundColor"),
+            );
+            FnWithArgs::<2>::rationalise_2_levels(&dataset, ("datalabels", "formatter"));
+            FnWithArgsOrT::<1, NumberString>::rationalise_2_levels(
+                &dataset,
+                ("datalabels", "offset"),
+            );
+            FnWithArgsOrT::<1, BoolString>::rationalise_2_levels(
+                &dataset,
+                ("datalabels", "display"),
+            );
+        });
+    }
+
+    // options.scales[*]
+    if let Some(scales) = object_values_at(obj, "options.scales") {
+        if let Ok(scales) = scales.dyn_into::<Object>() {
+            Object::values(&scales).iter().for_each(|scale| {
+                FnWithArgs::<3>::rationalise_2_levels(&scale, ("ticks", "callback"));
             });
+        }
+    }
 
-        // Handle options.scales
-        if let Some(scales) = object_values_at(&self.obj, "options.scales") {
-            Object::values(&scales.dyn_into().unwrap())
-                .iter()
-                .for_each(|scale| {
-                    FnWithArgs::<3>::rationalise_2_levels(&scale, ("ticks", "callback"));
-                });
-        }
-
-        // Handle options.plugins.legend
-        if let Some(legend) = object_values_at(&self.obj, "options.plugins.legend") {
-            FnWithArgs::<2>::rationalise_2_levels(&legend, ("labels", "filter"));
-            FnWithArgs::<3>::rationalise_2_levels(&legend, ("labels", "sort"));
-        }
-        // Handle options.plugins.tooltip
-        if let Some(legend) = object_values_at(&self.obj, "options.plugins.tooltip") {
-            FnWithArgs::<1>::rationalise_1_level(&legend, "filter");
-            FnWithArgs::<1>::rationalise_2_levels(&legend, ("callbacks", "label"));
-            FnWithArgs::<1>::rationalise_2_levels(&legend, ("callbacks", "title"));
-        }
+    // options.plugins.legend
+    if let Some(legend) = object_values_at(obj, "options.plugins.legend") {
+        FnWithArgs::<2>::rationalise_2_levels(&legend, ("labels", "filter"));
+        FnWithArgs::<3>::rationalise_2_levels(&legend, ("labels", "sort"));
+    }
+    // options.plugins.tooltip
+    if let Some(tooltip) = object_values_at(obj, "options.plugins.tooltip") {
+        FnWithArgs::<1>::rationalise_1_level(&tooltip, "filter");
+        FnWithArgs::<1>::rationalise_2_levels(&tooltip, ("callbacks", "label"));
+        FnWithArgs::<1>::rationalise_2_levels(&tooltip, ("callbacks", "title"));
     }
 }
