@@ -29,7 +29,7 @@ web-sys = { version = "0.3.102", optional = true, features = [
     "WorkerOptions",
     "WorkerType",
 ] }
-worxide = { version = "0.0.5", optional = true }
+worxide = { version = "0.0.6", optional = true }
 wasm-bindgen-futures = { version = "0.4.75", optional = true }
 itertools = "0.15.0"
 

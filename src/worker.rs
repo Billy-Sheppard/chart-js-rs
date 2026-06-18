@@ -152,8 +152,8 @@ fn pin_integer_size(el: &web_sys::Element) -> (f64, f64) {
     let h = rect.height().floor().max(1.0);
     if let Some(he) = el.dyn_ref::<web_sys::HtmlElement>() {
         let style = he.style();
-        let _ = style.set_property("width", &format!("{w}px"));
-        let _ = style.set_property("height", &format!("{h}px"));
+        style.set_property("width", &format!("{w}px")).unwrap();
+        style.set_property("height", &format!("{h}px")).unwrap();
     }
     (w, h)
 }
@@ -186,10 +186,8 @@ impl Drop for ResizeWatchers {
             o.disconnect();
         }
         if let Some(w) = web_sys::window() {
-            let _ = w.remove_event_listener_with_callback(
-                "resize",
-                self.win_cb.as_ref().unchecked_ref(),
-            );
+            w.remove_event_listener_with_callback("resize", self.win_cb.as_ref().unchecked_ref())
+                .unwrap();
         }
     }
 }
@@ -274,14 +272,15 @@ fn build_chart(
 
     let chart = Reflect::construct(&chart_ctor()?, &Array::of2(&entry.canvas, &obj))?;
     // Explicit logical resize so Chart.js sets the buffer to css*dpr.
-    let _ = call_method(
+    call_method(
         &chart,
         "resize",
         &[
             JsValue::from_f64(entry.width),
             JsValue::from_f64(entry.height),
         ],
-    );
+    )
+    .unwrap();
 
     // Initial animation unless options.animation === false.
     let animate = Reflect::get(&obj, &"options".into())
@@ -290,7 +289,7 @@ fn build_chart(
         .map(|a| a != JsValue::FALSE)
         .unwrap_or(true);
     if animate {
-        let _ = call_method(&chart, "update", &[JsValue::from_str("active")]);
+        call_method(&chart, "update", &[JsValue::from_str("active")]).unwrap();
     }
     Ok(chart)
 }
@@ -361,13 +360,14 @@ fn resize_chart(id: &str, width: f64, height: f64, dpr: f64) {
     CHARTS.with(|m| {
         if let Some(chart) = m.borrow().get(id) {
             if let Ok(opts) = Reflect::get(chart, &"options".into()) {
-                let _ = Reflect::set(&opts, &"devicePixelRatio".into(), &JsValue::from_f64(dpr));
+                Reflect::set(&opts, &"devicePixelRatio".into(), &JsValue::from_f64(dpr)).unwrap();
             }
-            let _ = call_method(
+            call_method(
                 chart,
                 "resize",
                 &[JsValue::from_f64(width), JsValue::from_f64(height)],
-            );
+            )
+            .unwrap();
         }
     });
 }
@@ -376,19 +376,21 @@ fn resize_chart(id: &str, width: f64, height: f64, dpr: f64) {
 fn handle_mouse(id: &str, event_type: &str, x: f64, y: f64, styles: JsValue) {
     CHARTS.with(|m| {
         if let Some(chart) = m.borrow().get(id) {
-            let _ = MOUSE_FN.with(|f| {
-                Reflect::apply(
-                    f,
-                    &JsValue::NULL,
-                    &Array::of5(
-                        chart,
-                        &JsValue::from_str(event_type),
-                        &JsValue::from_f64(x),
-                        &JsValue::from_f64(y),
-                        &styles,
-                    ),
-                )
-            });
+            MOUSE_FN
+                .with(|f| {
+                    Reflect::apply(
+                        f,
+                        &JsValue::NULL,
+                        &Array::of5(
+                            chart,
+                            &JsValue::from_str(event_type),
+                            &JsValue::from_f64(x),
+                            &JsValue::from_f64(y),
+                            &styles,
+                        ),
+                    )
+                })
+                .unwrap();
         }
     });
 }
@@ -430,7 +432,7 @@ pub fn update(chart: Box<dyn crate::WorkerChartExt>, id: String, animate: bool) 
 pub fn forget_chart(id: &str) {
     CANVASES.with(|c| c.borrow_mut().remove(id));
     if let Some(chart) = CHARTS.with(|m| m.borrow_mut().remove(id)) {
-        let _ = call_method(&chart, "destroy", &[]);
+        call_method(&chart, "destroy", &[]).unwrap();
     }
 }
 
@@ -662,12 +664,12 @@ impl ChartWorker {
                     .filter(|d| *d > 0.0)
                     .unwrap_or(1.0);
                 let msg = Object::new();
-                let _ = Reflect::set(&msg, &"type".into(), &"cjsrs-resize".into());
-                let _ = Reflect::set(&msg, &"id".into(), &id.clone().into());
-                let _ = Reflect::set(&msg, &"width".into(), &JsValue::from_f64(w));
-                let _ = Reflect::set(&msg, &"height".into(), &JsValue::from_f64(h));
-                let _ = Reflect::set(&msg, &"dpr".into(), &JsValue::from_f64(dpr));
-                let _ = worker.raw().post_message(&msg);
+                Reflect::set(&msg, &"type".into(), &"cjsrs-resize".into()).unwrap();
+                Reflect::set(&msg, &"id".into(), &id.clone().into()).unwrap();
+                Reflect::set(&msg, &"width".into(), &JsValue::from_f64(w)).unwrap();
+                Reflect::set(&msg, &"height".into(), &JsValue::from_f64(h)).unwrap();
+                Reflect::set(&msg, &"dpr".into(), &JsValue::from_f64(dpr)).unwrap();
+                worker.worker_handle().post_message(&msg).unwrap();
             }
         });
         let send_fn: Function = send_cb.as_ref().unchecked_ref::<Function>().clone();
@@ -690,7 +692,8 @@ impl ChartWorker {
             move || debounce(&timer, &send_fn)
         });
         if let Some(w) = web_sys::window() {
-            let _ = w.add_event_listener_with_callback("resize", win_cb.as_ref().unchecked_ref());
+            w.add_event_listener_with_callback("resize", win_cb.as_ref().unchecked_ref())
+                .unwrap();
         }
 
         ResizeWatchers {
@@ -725,7 +728,7 @@ impl ChartWorker {
             )
             .into());
         }
-        let _ = canvas.set_attribute("data-cjsrs-transferred", "1");
+        canvas.set_attribute("data-cjsrs-transferred", "1").unwrap();
 
         let offscreen = canvas
             .transfer_control_to_offscreen()
@@ -744,7 +747,7 @@ impl ChartWorker {
         set("dpr", &JsValue::from_f64(dpr))?;
 
         self.worker
-            .raw()
+            .worker_handle()
             .post_message_with_transfer(&msg, &Array::of1(&offscreen))
             .map_err(|e| format!("{e:?}"))?;
         Ok(())
@@ -770,11 +773,12 @@ impl ChartWorker {
                 ("lineHeight", "line-height"),
                 ("color", "color"),
             ] {
-                let _ = Reflect::set(
+                Reflect::set(
                     &o,
                     &k.into(),
                     &styles.get_property_value(css).unwrap_or_default().into(),
-                );
+                )
+                .unwrap();
             }
             o
         };
@@ -791,9 +795,9 @@ impl ChartWorker {
             let cb =
                 Closure::<dyn FnMut(web_sys::MouseEvent)>::new(move |e: web_sys::MouseEvent| {
                     let msg = Object::new();
-                    let _ = Reflect::set(&msg, &"type".into(), &"cjsrs-mouse".into());
-                    let _ = Reflect::set(&msg, &"eventType".into(), &event_type.into());
-                    let _ = Reflect::set(&msg, &"chartId".into(), &chart_id.clone().into());
+                    Reflect::set(&msg, &"type".into(), &"cjsrs-mouse".into()).unwrap();
+                    Reflect::set(&msg, &"eventType".into(), &event_type.into()).unwrap();
+                    Reflect::set(&msg, &"chartId".into(), &chart_id.clone().into()).unwrap();
                     if with_xy {
                         // Read geometry fresh each event so coords stay correct
                         // after resize / zoom / scroll.
@@ -802,13 +806,13 @@ impl ChartWorker {
                         let ch = el_evt.client_height() as f64;
                         let x = (e.client_x() as f64 - rect.left()) * (cw / rect.width());
                         let y = (e.client_y() as f64 - rect.top()) * (ch / rect.height());
-                        let _ = Reflect::set(&msg, &"x".into(), &JsValue::from_f64(x));
-                        let _ = Reflect::set(&msg, &"y".into(), &JsValue::from_f64(y));
+                        Reflect::set(&msg, &"x".into(), &JsValue::from_f64(x)).unwrap();
+                        Reflect::set(&msg, &"y".into(), &JsValue::from_f64(y)).unwrap();
                     }
                     if with_styles {
-                        let _ = Reflect::set(&msg, &"computedStyles".into(), &computed);
+                        Reflect::set(&msg, &"computedStyles".into(), &computed).unwrap();
                     }
-                    let _ = worker.raw().post_message(&msg);
+                    worker.worker_handle().post_message(&msg).unwrap();
                 });
             el.add_event_listener_with_callback(event_type, cb.as_ref().unchecked_ref())
                 .map_err(|e| format!("{e:?}"))?;
