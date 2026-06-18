@@ -63,11 +63,23 @@ struct CanvasEntry {
     dpr: f64,
 }
 
+/// A `render` that arrived before its OffscreenCanvas. The serialized config is
+/// held until `store_canvas` supplies the canvas, at which point the build runs.
+/// See `render` for why this can happen.
+struct PendingBuild {
+    obj: JsValue,
+    plugins: String,
+    defaults: String,
+}
+
 thread_local! {
     /// OffscreenCanvases transferred in, keyed by chart id, awaiting `render`.
     static CANVASES: RefCell<HashMap<String, CanvasEntry>> = RefCell::new(HashMap::new());
     /// Live Chart.js instances, keyed by chart id.
     static CHARTS: RefCell<HashMap<String, JsValue>> = RefCell::new(HashMap::new());
+
+    /// Renders awaiting their canvas, keyed by chart id (see `render`).
+    static PENDING_BUILD: RefCell<HashMap<String, PendingBuild>> = RefCell::new(HashMap::new());
 
     /// Chart.js mouse/tooltip/legend interaction, kept as JS because doing it
     /// through `Reflect` would be far longer and more brittle. Args:
@@ -186,8 +198,40 @@ impl Drop for ResizeWatchers {
             o.disconnect();
         }
         if let Some(w) = web_sys::window() {
-            w.remove_event_listener_with_callback("resize", self.win_cb.as_ref().unchecked_ref())
-                .unwrap();
+            // Drop runs on the main thread; warn! only logs (no panic). A failed
+            // removal is near-impossible but silent if it happens, so surface it.
+            if let Err(e) = w
+                .remove_event_listener_with_callback("resize", self.win_cb.as_ref().unchecked_ref())
+            {
+                gloo_console::warn!(format!(
+                    "chart-js-rs: failed to remove window resize listener: {e:?}"
+                ));
+            }
+        }
+    }
+}
+
+/// DOM mouse listeners forwarding pointer events to the worker. Held for the
+/// chart's lifetime and dropped on teardown, which removes the listeners and
+/// frees the closures. (These were previously `forget()`-ed, leaking three
+/// closures on every render — unbounded across an SPA's mount/unmount cycles.)
+pub(crate) struct MouseHandlers {
+    el: web_sys::Element,
+    #[allow(clippy::type_complexity)]
+    handlers: Vec<(&'static str, Closure<dyn FnMut(web_sys::MouseEvent)>)>,
+}
+
+impl Drop for MouseHandlers {
+    fn drop(&mut self) {
+        for (event_type, cb) in &self.handlers {
+            if let Err(e) = self
+                .el
+                .remove_event_listener_with_callback(event_type, cb.as_ref().unchecked_ref())
+            {
+                gloo_console::warn!(format!(
+                    "chart-js-rs: failed to remove `{event_type}` listener: {e:?}"
+                ));
+            }
         }
     }
 }
@@ -279,8 +323,7 @@ fn build_chart(
             JsValue::from_f64(entry.width),
             JsValue::from_f64(entry.height),
         ],
-    )
-    .unwrap();
+    )?;
 
     // Initial animation unless options.animation === false.
     let animate = Reflect::get(&obj, &"options".into())
@@ -289,7 +332,7 @@ fn build_chart(
         .map(|a| a != JsValue::FALSE)
         .unwrap_or(true);
     if animate {
-        call_method(&chart, "update", &[JsValue::from_str("active")]).unwrap();
+        call_method(&chart, "update", &[JsValue::from_str("active")])?;
     }
     Ok(chart)
 }
@@ -331,11 +374,13 @@ fn update_chart(chart: &JsValue, updated: JsValue, animate: bool) -> bool {
     }
 }
 
-/// Stash a transferred OffscreenCanvas (called by the message listener).
+/// Stash a transferred OffscreenCanvas (called by the message listener). If a
+/// `render` for this id arrived first and is waiting (see `render`), complete
+/// that build now.
 fn store_canvas(id: String, canvas: JsValue, width: f64, height: f64, dpr: f64) {
     CANVASES.with(|c| {
         c.borrow_mut().insert(
-            id,
+            id.clone(),
             CanvasEntry {
                 canvas,
                 width,
@@ -344,6 +389,11 @@ fn store_canvas(id: String, canvas: JsValue, width: f64, height: f64, dpr: f64) 
             },
         );
     });
+    if let Some(pb) = PENDING_BUILD.with(|p| p.borrow_mut().remove(&id)) {
+        if let Err(e) = build_now(&id, pb.obj, &pb.plugins, &pb.defaults) {
+            gloo_console::error!(format!("chart-js-rs:worker deferred build failed: {e}"));
+        }
+    }
 }
 
 /// Resize a live chart (container resize or zoom/DPR change). Updates the stored
@@ -359,15 +409,24 @@ fn resize_chart(id: &str, width: f64, height: f64, dpr: f64) {
     });
     CHARTS.with(|m| {
         if let Some(chart) = m.borrow().get(id) {
-            if let Ok(opts) = Reflect::get(chart, &"options".into()) {
-                Reflect::set(&opts, &"devicePixelRatio".into(), &JsValue::from_f64(dpr)).unwrap();
+            // Runs on the worker's message-listener path, not inside a worxide
+            // task, so a panic here would tear down the whole worker. Log and
+            // move on instead of unwrapping.
+            let go = || -> Result<(), JsValue> {
+                let opts = Reflect::get(chart, &"options".into())?;
+                Reflect::set(&opts, &"devicePixelRatio".into(), &JsValue::from_f64(dpr))?;
+                call_method(
+                    chart,
+                    "resize",
+                    &[JsValue::from_f64(width), JsValue::from_f64(height)],
+                )?;
+                Ok(())
+            };
+            if let Err(e) = go() {
+                gloo_console::error!(format!(
+                    "chart-js-rs:worker resize failed for `{id}`: {e:?}"
+                ));
             }
-            call_method(
-                chart,
-                "resize",
-                &[JsValue::from_f64(width), JsValue::from_f64(height)],
-            )
-            .unwrap();
         }
     });
 }
@@ -376,28 +435,59 @@ fn resize_chart(id: &str, width: f64, height: f64, dpr: f64) {
 fn handle_mouse(id: &str, event_type: &str, x: f64, y: f64, styles: JsValue) {
     CHARTS.with(|m| {
         if let Some(chart) = m.borrow().get(id) {
-            MOUSE_FN
-                .with(|f| {
-                    Reflect::apply(
-                        f,
-                        &JsValue::NULL,
-                        &Array::of5(
-                            chart,
-                            &JsValue::from_str(event_type),
-                            &JsValue::from_f64(x),
-                            &JsValue::from_f64(y),
-                            &styles,
-                        ),
-                    )
-                })
-                .unwrap();
+            // Message-listener path (not a worxide task): Chart.js internals can
+            // throw on version skew or unexpected state, and a panic here would
+            // kill the worker and every chart on it. Log and continue.
+            let r = MOUSE_FN.with(|f| {
+                Reflect::apply(
+                    f,
+                    &JsValue::NULL,
+                    &Array::of5(
+                        chart,
+                        &JsValue::from_str(event_type),
+                        &JsValue::from_f64(x),
+                        &JsValue::from_f64(y),
+                        &styles,
+                    ),
+                )
+            });
+            if let Err(e) = r {
+                gloo_console::error!(format!(
+                    "chart-js-rs:worker mouse `{event_type}` failed for `{id}`: {e:?}"
+                ));
+            }
         }
     });
+}
+
+/// Build a chart now: pair the (already serialized) config with the stored
+/// canvas, construct the Chart.js instance, and keep it for later updates.
+fn build_now(id: &str, obj: JsValue, plugins: &str, defaults: &str) -> Result<(), String> {
+    let chart_js = CANVASES
+        .with(|c| {
+            c.borrow()
+                .get(id)
+                .map(|entry| build_chart(entry, obj, plugins, defaults))
+        })
+        .ok_or_else(|| format!("chart-js-rs: no OffscreenCanvas transferred for `{id}`"))?
+        .map_err(|e| format!("chart-js-rs: build failed for `{id}`: {e:?}"))?;
+    CHARTS.with(|m| m.borrow_mut().insert(id.to_string(), chart_js));
+    Ok(())
 }
 
 /// Worker-side render — the closure body shipped to `run_blocking`. The chart
 /// `C` arrived by pointer; serialize here, pair with the transferred canvas,
 /// build, and keep the instance for later updates.
+///
+/// If the canvas has already arrived (the common case — the transfer and this
+/// call travel the worker's default `postMessage` channel in FIFO order), build
+/// immediately and surface any build error to the caller. If it hasn't, stash
+/// the serialized config; `store_canvas` completes the build when the transfer
+/// lands. This keeps the build correct regardless of canvas-vs-render arrival
+/// order, so it does not depend on worxide routing call dispatch over the same
+/// channel as the canvas transfer (e.g. if worxide ever moves dispatch onto a
+/// private port). In that deferred case a build error is logged on the worker
+/// rather than returned here, since the call has already resolved.
 pub fn render(
     chart: Box<dyn crate::WorkerChartExt>,
     id: String,
@@ -405,16 +495,22 @@ pub fn render(
     defaults: String,
 ) -> Result<(), String> {
     let obj = chart.render_json(); // serialization happens on the worker
-    let chart_js = CANVASES
-        .with(|c| {
-            c.borrow()
-                .get(&id)
-                .map(|entry| build_chart(entry, obj, &plugins, &defaults))
-        })
-        .ok_or_else(|| format!("chart-js-rs: no OffscreenCanvas transferred for `{id}`"))?
-        .map_err(|e| format!("chart-js-rs: build failed for `{id}`: {e:?}"))?;
-    CHARTS.with(|m| m.borrow_mut().insert(id, chart_js));
-    Ok(())
+    let have_canvas = CANVASES.with(|c| c.borrow().contains_key(&id));
+    if have_canvas {
+        build_now(&id, obj, &plugins, &defaults)
+    } else {
+        PENDING_BUILD.with(|p| {
+            p.borrow_mut().insert(
+                id,
+                PendingBuild {
+                    obj,
+                    plugins,
+                    defaults,
+                },
+            );
+        });
+        Ok(())
+    }
 }
 
 /// Worker-side update — also handed to `run_blocking`. `false` if no live
@@ -431,8 +527,13 @@ pub fn update(chart: Box<dyn crate::WorkerChartExt>, id: String, animate: bool) 
 /// canvas context is released rather than leaked.
 pub fn forget_chart(id: &str) {
     CANVASES.with(|c| c.borrow_mut().remove(id));
+    PENDING_BUILD.with(|p| p.borrow_mut().remove(id));
     if let Some(chart) = CHARTS.with(|m| m.borrow_mut().remove(id)) {
-        call_method(&chart, "destroy", &[]).unwrap();
+        if let Err(e) = call_method(&chart, "destroy", &[]) {
+            gloo_console::error!(format!(
+                "chart-js-rs:worker destroy failed for `{id}`: {e:?}"
+            ));
+        }
     }
 }
 
@@ -537,8 +638,14 @@ fn install_message_listener() {
             _ => {} // worxide frame or unrelated; not ours.
         }
     });
-    let _ =
-        worker_global().add_event_listener_with_callback("message", cb.as_ref().unchecked_ref());
+    if let Err(e) =
+        worker_global().add_event_listener_with_callback("message", cb.as_ref().unchecked_ref())
+    {
+        gloo_console::warn!(format!(
+            "chart-js-rs:worker failed to install message listener (canvas/resize/mouse \
+             will not be received): {e:?}"
+        ));
+    }
     cb.forget(); // lives for the worker's lifetime
 }
 
@@ -599,24 +706,28 @@ impl ChartWorker {
 
     /// Render a chart off the main thread: transfer the canvas, wire DOM mouse
     /// forwarding, then dispatch `render` with the chart moved across by pointer
-    /// (no main-thread serialization).
+    /// (no main-thread serialization). Returns the DOM mouse-listener handle; the
+    /// caller must keep it alive for the chart's lifetime (it removes the
+    /// listeners and frees their closures on drop).
     pub(crate) async fn render(
         &self,
         chart: Box<dyn crate::WorkerChartExt>,
         id: String,
         plugins: String,
         defaults: String,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<MouseHandlers, Box<dyn std::error::Error>> {
         // Attach DOM mouse listeners BEFORE transferring control to the
         // OffscreenCanvas — matching the original worker. Listeners added after
         // transfer don't reliably fire, so order matters here.
-        self.install_dom_mouse_handlers(&id)?;
+        let mouse = self.install_dom_mouse_handlers(&id)?;
         self.transfer_canvas(&id)?;
         self.worker
             .run_blocking(move || render(chart, id, plugins, defaults))
             .await
             .map_err(|e| e.to_string())?
-            .map_err(|e| -> Box<dyn std::error::Error> { e.into() })
+            .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+        // On any `?` above, `mouse` drops here and its listeners are removed.
+        Ok(mouse)
     }
 
     pub(crate) async fn update(
@@ -718,9 +829,11 @@ impl ChartWorker {
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .map_err(|_| format!("element `{id}` is not a <canvas>"))?;
 
-        // A canvas can be transferred exactly once, ever. Mark it on first
-        // transfer and refuse a second attempt with a clean error instead of
+        // A canvas can be transferred exactly once, ever. If it carries our mark
+        // from a prior successful transfer, refuse with a clean error instead of
         // letting `transferControlToOffscreen` throw `InvalidStateError`.
+        // (Concurrent first-render races are serialized by `PENDING` upstream;
+        // this guards a genuine re-transfer of an already-transferred element.)
         if canvas.has_attribute("data-cjsrs-transferred") {
             return Err(format!(
                 "canvas `{id}` was already transferred to a worker; render once \
@@ -728,10 +841,14 @@ impl ChartWorker {
             )
             .into());
         }
-        canvas.set_attribute("data-cjsrs-transferred", "1").unwrap();
 
         let offscreen = canvas
             .transfer_control_to_offscreen()
+            .map_err(|e| format!("{e:?}"))?;
+        // Mark only after the transfer actually succeeded, so a failed transfer
+        // doesn't poison the element against every later attempt.
+        canvas
+            .set_attribute("data-cjsrs-transferred", "1")
             .map_err(|e| format!("{e:?}"))?;
 
         let msg = Object::new();
@@ -754,8 +871,12 @@ impl ChartWorker {
     }
 
     /// Forward mouse events from the DOM canvas to the worker (it has no DOM, so
-    /// we ship scaled coordinates + computed styles).
-    fn install_dom_mouse_handlers(&self, id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    /// we ship scaled coordinates + computed styles). Returns a handle owning the
+    /// listener closures; dropping it removes the listeners and frees them.
+    fn install_dom_mouse_handlers(
+        &self,
+        id: &str,
+    ) -> Result<MouseHandlers, Box<dyn std::error::Error>> {
         let el = gloo_utils::document()
             .get_element_by_id(id)
             .ok_or_else(|| format!("no element with id `{id}`"))?;
@@ -783,6 +904,7 @@ impl ChartWorker {
             o
         };
 
+        let mut handlers = Vec::new();
         for (event_type, with_xy, with_styles) in [
             ("mousemove", true, true),
             ("mouseleave", false, false),
@@ -816,8 +938,8 @@ impl ChartWorker {
                 });
             el.add_event_listener_with_callback(event_type, cb.as_ref().unchecked_ref())
                 .map_err(|e| format!("{e:?}"))?;
-            cb.forget();
+            handlers.push((event_type, cb));
         }
-        Ok(())
+        Ok(MouseHandlers { el, handlers })
     }
 }

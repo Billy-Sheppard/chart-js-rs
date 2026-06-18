@@ -10,6 +10,16 @@ pub fn get_order_fn(
 ) -> std::cmp::Ordering {
     crate::utils::ORDER_FN.with_borrow(|f| f(lhs, rhs))
 }
+/// Set the comparator used to sort dataset points during serialization.
+///
+/// `ORDER_FN` is a `thread_local`, and for a worker-rendered chart the
+/// serialization (`into_json`) runs on the *worker* thread, not the main one.
+/// Calling this on the main thread therefore does **not** affect worker charts —
+/// the worker has its own (default) comparator. To customize ordering for a
+/// worker chart, set it on the worker via [`WorkerChart::worker_setup`] /
+/// [`ChartWorker::run_setup`] (the closure runs on the worker), e.g.
+/// `worker_setup(|| chart_js_rs::set_order_fn(my_cmp))`. The main-thread
+/// `Chart::render` path is unaffected.
 pub fn set_order_fn<
     F: Fn(&crate::NumberOrDateString, &crate::NumberOrDateString) -> std::cmp::Ordering + 'static,
 >(

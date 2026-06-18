@@ -234,6 +234,9 @@ mod worker_chart {
         _on_mutation: Closure<dyn FnMut()>,
         /// Resize/zoom watchers; dropped (torn down) with this entry.
         _resize: crate::worker::ResizeWatchers,
+        /// DOM mouse-forwarding listeners; dropped (removed + freed) with this
+        /// entry rather than leaked.
+        _mouse: crate::worker::MouseHandlers,
     }
 
     /// Terminate and forget the live worker for `id`, if any.
@@ -265,7 +268,12 @@ mod worker_chart {
         let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
     }
 
-    fn keep_until_removed(id: String, el: web_sys::Element, worker: ChartWorker) {
+    fn keep_until_removed(
+        id: String,
+        el: web_sys::Element,
+        worker: ChartWorker,
+        mouse: crate::worker::MouseHandlers,
+    ) {
         let cb = {
             let id = id.clone();
             let el = el.clone();
@@ -287,7 +295,12 @@ mod worker_chart {
             let init = js_sys::Object::new();
             let _ = js_sys::Reflect::set(&init, &"childList".into(), &wasm_bindgen::JsValue::TRUE);
             let _ = js_sys::Reflect::set(&init, &"subtree".into(), &wasm_bindgen::JsValue::TRUE);
-            let _ = observer.observe_with_options(&body, init.unchecked_ref());
+            if let Err(e) = observer.observe_with_options(&body, init.unchecked_ref()) {
+                gloo_console::warn!(format!(
+                    "chart-js-rs: MutationObserver.observe failed; auto-teardown disabled \
+                     for this chart: {e:?}"
+                ));
+            }
         }
         LIVE.with(|m| {
             m.borrow_mut().insert(
@@ -298,6 +311,7 @@ mod worker_chart {
                     observer,
                     _on_mutation: cb,
                     _resize: resize,
+                    _mouse: mouse,
                 },
             );
         });
@@ -440,12 +454,15 @@ mod worker_chart {
                 }
             }
 
-            result?;
+            // Propagate a render error (the mouse handle was already dropped on
+            // the error path inside `ChartWorker::render`); otherwise take it.
+            let mouse = result?;
 
             // Keep the worker alive (for tooltips / updates) until the canvas
-            // element leaves the DOM, then terminate it.
+            // element leaves the DOM, then terminate it. The mouse handle rides
+            // along so its listeners are removed on teardown rather than leaked.
             if let Some(el) = gloo_utils::document().get_element_by_id(&id) {
-                keep_until_removed(id, el, worker);
+                keep_until_removed(id, el, worker, mouse);
             }
             Ok(())
         }
