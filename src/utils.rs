@@ -25,7 +25,9 @@ pub fn set_order_fn<
 >(
     f: F,
 ) {
-    let _ = ORDER_FN.replace(Box::new(f));
+    // `replace` hands back the previous comparator; drop it explicitly (a bare
+    // statement trips `unused_must_use` on the boxed Fn).
+    drop(ORDER_FN.replace(Box::new(f)));
 }
 
 thread_local! {
@@ -188,6 +190,7 @@ pub(crate) fn rationalise(obj: &JsValue) {
     if let Some(legend) = object_values_at(obj, "options.plugins.legend") {
         FnWithArgs::<2>::rationalise_2_levels(&legend, ("labels", "filter"));
         FnWithArgs::<3>::rationalise_2_levels(&legend, ("labels", "sort"));
+        FnWithArgs::<1>::rationalise_2_levels(&legend, ("labels", "generateLabels"));
     }
     // options.plugins.tooltip
     if let Some(tooltip) = object_values_at(obj, "options.plugins.tooltip") {

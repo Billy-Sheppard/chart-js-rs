@@ -261,11 +261,11 @@ mod worker_chart {
         };
         let promise = js_sys::Promise::new(&mut |resolve, _reject| {
             let cb = Closure::once_into_js(move |_t: wasm_bindgen::JsValue| {
-                let _ = resolve.call0(&wasm_bindgen::JsValue::NULL);
+                resolve.call0(&wasm_bindgen::JsValue::NULL).ok();
             });
-            let _ = win.request_animation_frame(cb.unchecked_ref());
+            win.request_animation_frame(cb.unchecked_ref()).ok();
         });
-        let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+        wasm_bindgen_futures::JsFuture::from(promise).await.ok();
     }
 
     fn keep_until_removed(
@@ -292,9 +292,11 @@ mod worker_chart {
         };
         let resize = worker.install_resize_watchers(&el, &id);
         if let Some(body) = gloo_utils::document().body() {
-            let init = js_sys::Object::new();
-            let _ = js_sys::Reflect::set(&init, &"childList".into(), &wasm_bindgen::JsValue::TRUE);
-            let _ = js_sys::Reflect::set(&init, &"subtree".into(), &wasm_bindgen::JsValue::TRUE);
+            let init = js_sys::Object::from_entries(&js_sys::Array::of2(
+                &js_sys::Array::of2(&"childList".into(), &wasm_bindgen::JsValue::TRUE),
+                &js_sys::Array::of2(&"subtree".into(), &wasm_bindgen::JsValue::TRUE),
+            ))
+            .unwrap_or_else(|_| js_sys::Object::new());
             if let Err(e) = observer.observe_with_options(&body, init.unchecked_ref()) {
                 gloo_console::warn!(format!(
                     "chart-js-rs: MutationObserver.observe failed; auto-teardown disabled \
@@ -450,7 +452,7 @@ mod worker_chart {
                     }
                 }
                 for n in added {
-                    let _ = parent.remove_child(&n);
+                    parent.remove_child(&n).ok();
                 }
             }
 
