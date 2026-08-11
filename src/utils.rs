@@ -155,8 +155,11 @@ impl Chart {
 pub(crate) fn rationalise(obj: &JsValue) {
     // data.datasets[*]
     if let Some(datasets) = object_values_at(obj, "data.datasets") {
-        Array::from(&datasets).iter().for_each(|dataset| {
+        Array::from(&datasets).iter().for_each(|dataset| { 
             FnWithArgsOrT::<2, String>::rationalise_1_level(&dataset, "backgroundColor");
+            FnWithArgsOrT::<1, String>::rationalise_1_level(&dataset, "backgroundColor"); 
+            FnWithArgsOrT::<2, String>::rationalise_1_level(&dataset, "hoverBackgroundColor");
+            FnWithArgsOrT::<1, String>::rationalise_1_level(&dataset, "hoverBackgroundColor");
             FnWithArgs::<1>::rationalise_2_levels(&dataset, ("segment", "borderDash"));
             FnWithArgs::<1>::rationalise_2_levels(&dataset, ("segment", "borderColor"));
             FnWithArgsOrT::<1, String>::rationalise_2_levels(&dataset, ("datalabels", "align"));
