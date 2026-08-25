@@ -15,24 +15,27 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/luxon@^2/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1/dist/chartjs-adapter-luxon.umd.min.js"></script>
-  
-  <script type="module">
-    import init from './chart_js_rs_example.js';
 
-    async function run() {
-      await init(); 
-    }
-
-    run();
+  <script>
+    (async () => {
+      if (self.crossOriginIsolated) return;
+      if (!('serviceWorker' in navigator)) return;
+      await navigator.serviceWorker.register('./sw.js', { scope: './' });
+      await navigator.serviceWorker.ready;
+      location.reload();
+    })();
   </script>
 </head>
 
 <body>
 </body>
 <script type="module">
-  import * as root from './chart_js_rs_example.js'
+  globalThis.app_js_path = "chart_js_rs_example.js";
 
+  import init, * as root from './chart_js_rs_example.js'
   window.callbacks = root;
+  await init();
+
   window.mutate_chart_object = function (v) {
     if (v.id == "bar") {
       v.options.scales.y1.ticks = {

@@ -132,8 +132,8 @@ pub struct XYDataset {
     pub(crate) grouped: Option<bool>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) hitRadius: NumberString,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub(crate) hoverBackgroundColor: String,
+    #[serde(skip_serializing_if = "FnWithArgsOrT::is_empty", default)]
+    pub(crate) hoverBackgroundColor: FnWithArgsOrT<1, String>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) hoverBorderColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
@@ -238,8 +238,8 @@ pub struct FloatingDataset {
     pub(crate) grouped: Option<bool>,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]
     pub(crate) hitRadius: NumberString,
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub(crate) hoverBackgroundColor: String,
+    #[serde(skip_serializing_if = "FnWithArgsOrT::is_empty", default)]
+    pub(crate) hoverBackgroundColor: FnWithArgsOrT<2, String>,
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub(crate) hoverBorderColor: String,
     #[serde(skip_serializing_if = "NumberString::is_empty", default)]

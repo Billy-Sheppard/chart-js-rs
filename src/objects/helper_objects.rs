@@ -404,7 +404,16 @@ impl<const N: usize> FnWithArgs<N> {
     pub fn build(self) -> Function {
         if let Some(id) = self.closure_id {
             let args = self.args.join(", ");
-            Function::new_with_args(&args, &format!("{{ return window['{id}']({args}) }}"))
+            // `rust_closure` registers the closure on the *creating* instance
+            // (the main thread) under `window['<id>']`. A worker is a separate
+            // wasm instance, so that entry is absent there — guard the lookup
+            // and fall back to `undefined` (Chart.js then uses its default for
+            // the property) instead of throwing "is not a function". On the main
+            // thread the closure is present and called as before.
+            Function::new_with_args(
+                &args,
+                &format!("{{ const f = window['{id}']; return f ? f({args}) : undefined; }}"),
+            )
         } else {
             Function::new_with_args(
                 &self.args.join(", "),

@@ -15,8 +15,6 @@ pub struct Bar<D: DatasetTrait> {
     id: String,
 }
 
-#[cfg(feature = "workers")]
-impl<D: DatasetTrait> crate::WorkerChartExt for Bar<D> {}
 impl<D: DatasetTrait> ChartExt for Bar<D> {
     type DS = Dataset<D>;
 

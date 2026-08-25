@@ -14,8 +14,6 @@ pub struct Pie {
     id: String,
 }
 
-#[cfg(feature = "workers")]
-impl crate::WorkerChartExt for Pie {}
 impl ChartExt for Pie {
     type DS = Dataset<Vec<SinglePointDataset>>;
 

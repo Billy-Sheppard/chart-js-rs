@@ -1,4 +1,6 @@
-#! /bin/sh
+#! /bin/bash
+
+rm -r examples/snippets
 
 cargo build --release --target wasm32-unknown-unknown --manifest-path examples/Cargo.toml
 

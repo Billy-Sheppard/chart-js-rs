@@ -84,6 +84,11 @@ git = "https://github.com/Billy-Sheppard/chart-js-rs"
 
 # Explainers
 
+## Using `#[cfg(feature = "workers")]`
+You must set up your WASM up following the `worxide` readme to use workers.
+
+https://github.com/Billy-Sheppard/chart-js-rs/blob/main/README.md
+
 ## Whats the difference between `my_chart.render()` and `mychart.mutate().render()`?
 `.render()` is for simple charts, that don't require any further changes done using javascript code.
 
