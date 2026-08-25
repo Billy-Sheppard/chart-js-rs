@@ -44,7 +44,7 @@ proc-macro2 = "1.0.107"
 syn = { features = ["parsing", "full"], version = "3.0.4" }
 
 [features]
-default = []
+default = ["web-sys"]
 workers = [
     "dep:worxide",
     "dep:wasm-bindgen-futures",

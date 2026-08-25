@@ -7,7 +7,6 @@
 //! through `gloo-utils` (already a dependency), so this stays on stable Rust.
 
 use js_sys::{Array, Function, Reflect};
-use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 
 /// The global `Chart` (set by the Chart.js UMD `<script>` on the page).
@@ -72,7 +71,7 @@ fn ensure_mt_dpr_watcher() {
             return;
         }
         f.set(true);
-        let cb = Closure::<dyn FnMut()>::new(|| {
+        let cb = wasm_bindgen::prelude::Closure::<dyn FnMut()>::new(|| {
             let _ = js_sys::eval(
                 r#"(function () {
                     try {
