@@ -1,6 +1,6 @@
 [package]
 name = "chart-js-rs"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 authors = ["Billy Sheppard", "Luis Moreno"]
 license = "Apache-2.0"
@@ -21,7 +21,7 @@ erased-serde = { version = "0.4.10" }
 serde_json = "1.0.151"
 serde-wasm-bindgen = "0.6.5"
 wasm-bindgen = { version = "0.2.127", features = ["serde-serialize"] }
-uuid = { version = "1.24.0", features = ["v4", "js"] }
+uuid = { version = "1.25.0", features = ["v4", "js"] }
 web-sys = { version = "0.3.104", optional = true, features = [
     "DomRect",
     "HtmlCanvasElement",
@@ -29,7 +29,7 @@ web-sys = { version = "0.3.104", optional = true, features = [
     "WorkerOptions",
     "WorkerType",
 ] }
-worxide = { version = "0.0.6", optional = true }
+worxide = { version = "0.0.7", optional = true }
 wasm-bindgen-futures = { version = "0.4.77", optional = true }
 itertools = "0.15.0"
 
@@ -41,7 +41,7 @@ heck = "0.5.0"
 itertools = "0.15.0"
 quote = "1.0.47"
 proc-macro2 = "1.0.107"
-syn = { features = ["parsing", "full"], version = "3.0.3" }
+syn = { features = ["parsing", "full"], version = "3.0.4" }
 
 [features]
 default = []
