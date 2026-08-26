@@ -12,6 +12,8 @@ pub mod scatter;
 pub mod traits;
 
 #[cfg(feature = "workers")]
+pub use worxide;
+#[cfg(feature = "workers")]
 pub mod worker;
 
 pub use objects::*;
